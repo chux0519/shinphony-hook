@@ -1,0 +1,13 @@
+{
+  "name": "shinphony-push-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --local",
+    "deploy:sandbox": "wrangler deploy",
+    "deploy:testflight": "wrangler deploy --env testflight",
+    "deploy:production": "wrangler deploy --env production"
+  },
+  "dependencies": { "@apple/app-store-server-library": "3.1.0" },
+  "devDependencies": { "wrangler": "^4" }
+}

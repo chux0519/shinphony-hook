@@ -1,0 +1,12 @@
+{
+  "name": "shinphony-site-worker",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "test": "node --test",
+    "test:script": "sh test/pair_test.sh",
+    "dev": "wrangler dev --local"
+  },
+  "devDependencies": { "wrangler": "^4" }
+}

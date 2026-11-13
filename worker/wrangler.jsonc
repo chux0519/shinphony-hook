@@ -1,0 +1,18 @@
+// Shinphony push relay on Cloudflare Workers (replaces the RackNerd VPS).
+// One Worker per lane; each lane's whole relay lives in one Durable Object.
+// Secrets (wrangler secret put): APNS_KEY_ID, APNS_TEAM_ID, APNS_PRIVATE_KEY,
+// IAP_KEY_ID, IAP_ISSUER_ID, IAP_PRIVATE_KEY.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "shinphony-push",
+  "main": "src/index.mjs",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "routes": [{ "pattern": "notify.potafree.net", "custom_domain": true }],
+  "alias": { "node-fetch": "./src/node-fetch-shim.mjs" },
+  "rules": [{ "type": "Data", "globs": ["**/*.cer"] }],
+  "durable_objects": { "bindings": [{ "name": "RELAY", "class_name": "RelayObject" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RelayObject"] }],
+  "vars": { "FREE_TIER": "1" }
+}

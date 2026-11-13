@@ -1,0 +1,85 @@
+#!/bin/sh
+# Shinphony setup: install the helper for this user, then show a pairing code.
+# Served by https://shinphony.app/pair. The sha256 values below were taken from
+# Shinphony's signed release metadata and verified before this script was sent,
+# so the downloaded helper is checked against exactly what that release signed.
+# Release: @@SEQUENCE@@
+set -eu
+umask 077
+
+darwin_arm64=@@DARWIN_ARM64@@
+darwin_amd64=@@DARWIN_AMD64@@
+linux_arm64=@@LINUX_ARM64@@
+linux_amd64=@@LINUX_AMD64@@
+downloads=@@DOWNLOAD_BASE@@
+
+fail() { printf '%s\n' "$1" >&2; exit "${2:-2}"; }
+
+# The helper belongs to the user who runs this. Never root.
+[ "$(id -u)" != 0 ] || fail 'Run this as your normal user, without sudo.'
+
+os=$(uname -s 2>/dev/null || true)
+arch=$(uname -m 2>/dev/null || true)
+case "$os:$arch" in
+  Darwin:arm64) platform=darwin-arm64; label='macOS arm64'; expected=$darwin_arm64 ;;
+  Darwin:x86_64) platform=darwin-amd64; label='macOS x86_64'; expected=$darwin_amd64 ;;
+  Linux:aarch64|Linux:arm64) platform=linux-arm64; label='Linux arm64'; expected=$linux_arm64 ;;
+  Linux:x86_64) platform=linux-amd64; label='Linux x86_64'; expected=$linux_amd64 ;;
+  *) fail 'Shinphony setup supports macOS and Linux. On Windows use Shinphony -> Add server -> Get installation command.' ;;
+esac
+case "$expected" in ''|*[!a-f0-9]*) fail 'This installer is not from a verified release. Get a new one from https://shinphony.app/pair' 3 ;; esac
+[ "${#expected}" = 64 ] || fail 'This installer is not from a verified release. Get a new one from https://shinphony.app/pair' 3
+case "$downloads" in
+  https://*) proto='=https' ;;
+  # Loopback is for local testing of this installer only; other http origins are refused.
+  http://127.0.0.1:*|http://localhost:*) proto='=http' ;;
+  *) fail 'This installer is not from a verified release.' 3 ;;
+esac
+
+# stdin is curl's pipe; pair draws the QR code on the terminal.
+{ : <>/dev/tty; } 2>/dev/null || fail 'Run this in a terminal: curl -fsSL https://shinphony.app/pair | sh'
+
+if [ "$os" = Darwin ]; then
+  hash_file() { shasum -a 256 "$1" | cut -d ' ' -f 1; }
+else
+  hash_file() { sha256sum "$1" | cut -d ' ' -f 1; }
+fi
+if [ "$os" = Darwin ]; then
+  file_mode() { stat -f %Lp "$1"; }; file_owner() { stat -f %u "$1"; }
+else
+  file_mode() { stat -c %a "$1"; }; file_owner() { stat -c %u "$1"; }
+fi
+
+dest=$HOME/.shinphony-agent
+[ ! -L "$dest" ] || fail 'Refusing to use a linked ~/.shinphony-agent.' 3
+[ -e "$dest" ] || mkdir "$dest" || fail 'Cannot create ~/.shinphony-agent.' 3
+[ -d "$dest" ] || fail '~/.shinphony-agent is not a directory.' 3
+[ "$(file_mode "$dest")" = 700 ] && [ "$(file_owner "$dest")" = "$(id -u)" ] || fail 'Unsafe helper directory: ~/.shinphony-agent must belong to you and be mode 700.' 3
+
+binary=$dest/shinphony-hook-$expected
+if [ -e "$binary" ] || [ -L "$binary" ]; then
+  # Never overwrite: an unexpected or foreign path stops the install.
+  [ -f "$binary" ] && [ ! -L "$binary" ] || fail 'Refusing to replace an unexpected file in ~/.shinphony-agent.' 3
+  [ "$(hash_file "$binary")" = "$expected" ] || fail 'The installed helper is not this verified release. Move it away and run this again.' 3
+  [ "$(file_mode "$binary")" = 700 ] && [ "$(file_owner "$binary")" = "$(id -u)" ] || fail 'The installed helper is not private to you.' 3
+  printf '%s\n' "Shinphony: reusing the installed helper ($label)."
+else
+  printf '%s\n' "Shinphony: installing helper ($label)…"
+  work=$(mktemp -d "${TMPDIR:-/tmp}/shinphony-pair.XXXXXXXX")
+  trap 'rm -rf -- "$work"' EXIT HUP INT TERM
+  curl --fail --progress-bar --proto "$proto" --connect-timeout 15 --max-time 210 --max-filesize 67108864 \
+    "$downloads/agent/targets/agent/$expected.$platform" -o "$work/helper" \
+    || fail 'Download failed. Nothing installed. Check your connection and run this again.' 4
+  [ "$(hash_file "$work/helper")" = "$expected" ] || fail 'The downloaded helper does not match the verified release. Nothing installed.' 3
+  chmod 700 "$work/helper"
+  # Hard-link into place so an existing path is never overwritten.
+  staging=$(mktemp "$dest/.install.XXXXXXXX")
+  cp "$work/helper" "$staging" && chmod 700 "$staging" || fail 'Cannot stage the helper.' 3
+  ln "$staging" "$binary" || { rm -f "$staging"; fail 'Cannot install the helper: the target path already exists.' 3; }
+  rm -f "$staging"
+fi
+
+# The trap does not run after exec: drop the downloaded helper first.
+[ -z "${work:-}" ] || { rm -rf -- "$work"; trap - EXIT HUP INT TERM; }
+printf '%s\n' 'Shinphony: starting pairing…'
+exec "$binary" pair </dev/tty >/dev/tty

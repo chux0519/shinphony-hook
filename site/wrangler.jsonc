@@ -1,0 +1,27 @@
+// Shinphony site Worker: https://shinphony.app
+//
+// GET /pair serves the one-line setup script with hashes verified against the
+// pinned TUF root in deploy/root.json; GET / redirects to the product page.
+// No Durable Objects, no KV, no bindings: one stateless Worker.
+//
+// Local testing (no deploy):
+//   npx wrangler dev --local
+//   curl -fsS http://127.0.0.1:8787/pair | sh
+// Optional overrides for a local or staging release:
+//   npx wrangler dev --local --var DOWNLOAD_BASE:http://127.0.0.1:8788 \
+//     --var METADATA_BASE:https://downloads.potafree.net/agent/stable/metadata
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "shinphony-site",
+  "main": "src/entry.mjs",
+  "compatibility_date": "2026-08-27",
+  "workers_dev": false,
+  "routes": [{ "pattern": "shinphony.app", "custom_domain": true }],
+  "rules": [{ "type": "Text", "globs": ["**/*.tmpl"] }],
+  // SOURCE_URL is shown on /hook as the public source link. Leave it unset
+  // until the public repository exists; /hook hides the link while it is empty.
+  "vars": {
+    "METADATA_BASE": "https://downloads.potafree.net/agent/stable/metadata",
+    "DOWNLOAD_BASE": "https://downloads.potafree.net"
+  }
+}
