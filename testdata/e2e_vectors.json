@@ -1,0 +1,21 @@
+{
+  "v": 1,
+  "info": "shinphony-notify-v1",
+  "hostRefDomain": "shinphony-hostref-v1",
+  "profile": "phone",
+  "hostRef": "WBi3H4ssf9hb7_cJb6yMMn",
+  "aad": "shinphony-notify-v1WBi3H4ssf9hb7_cJb6yMMn",
+  "phonePublicKey": "EQkcev3Vb43WMXj6x7lHAYhvzCZRZmZ5TiRkpJyXUmU",
+  "phonePrivateKey": "GFNfb3oTHKa8F_2NkLJj5cXVdLtHiEMUUcixasmOFsw",
+  "ephemeralPublicKey": "8aID3Y228vkvg1jeuLBeVCWqtYvmyZX5B-KytOduvzI",
+  "ephemeralPrivateKey": "5bnPpx_2P4_GMyEnsVGcZpyVwMfG3DH661A2RXu0IOc",
+  "nonce": "z0B00uxFT1HPLcIw",
+  "plaintextJSON": "{\"category\":\"approval_required\",\"agent\":\"claude\",\"session\":\"0123456789abcdef0123456789abcdef\",\"title\":\"Allow Bash?\",\"body\":\"npm test -- --watch=false\",\"project\":\"hook\",\"visibility\":\"banner\",\"lines\":[\"$ npm test\",\"61 passing\",\"Done in 12.4s\"]}",
+  "envelope": {
+    "v": 1,
+    "epk": "8aID3Y228vkvg1jeuLBeVCWqtYvmyZX5B-KytOduvzI",
+    "n": "z0B00uxFT1HPLcIw",
+    "ct": "60AlR6btXKIN5clmbSXtkO-T18PoHcSr6w53YEMB_JAZvjVekKl8it69v3AG3tT7gilvA_462KaLSI0hoxKMWOpjTACs6_ckvSYIyARSbPT8_f21NdZv70UlP9G4HjqvgkdAIIPM6raTYH8h7zSTrEzsUSRGsQ9bSYG4ovJTOjl1dTCZEsGyNGngXzSiP8dz-xXwW3tpcDwVkmfzb3qsBoG3S2wMhEx9VVPhNn32AI7jTVftAWWQaFrXRjzYmToa4GC4YLSoediSoFzmwf-NGHy5ouY1r5aP-YdaOgdMh9mosN9hCTFy3u_MVkQ9mlAGXCYr9GirNNpXwPXLzuBGoH-s"
+  },
+  "notes": "Fixed test keys and nonce; derived from SHA-256 of their labels. Never use them for a real pairing."
+}

@@ -4,7 +4,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { createSshPairingTable, handleSshPairing } from './ssh-pairing.mjs';
 import { notificationRequest, providerToken } from './apns-core.mjs';
 import { taskContext } from './task-context.mjs';
-import { agentDetails, detailFields } from './agent-event.mjs';
+import { agentDetails, detailFields, e2ePayload } from './agent-event.mjs';
 import { createActivityTable, handleActivity, liveActivityRequest, startActivityRequest, maybeAutoStart, recordSession, aggregate, RUNNING_TTL } from './live-activity.mjs';
 
 const hash = value => createHash('sha256').update(value).digest('hex');
@@ -45,7 +45,7 @@ export class Relay {
       CREATE INDEX IF NOT EXISTS events_created ON events(created);
       CREATE INDEX IF NOT EXISTS events_host_time ON events(host_key, created);`);
     const columns = this.db.columns('events');
-    for (const [name, type] of [['apns_status', 'INTEGER'], ['apns_reason', 'TEXT'], ['context_json', 'TEXT'], ['details_json', 'TEXT'], ['live_only', 'INTEGER'], ['start_json', 'TEXT']]) {
+    for (const [name, type] of [['apns_status', 'INTEGER'], ['apns_reason', 'TEXT'], ['context_json', 'TEXT'], ['details_json', 'TEXT'], ['live_only', 'INTEGER'], ['start_json', 'TEXT'], ['e2e_json', 'TEXT'], ['host_ref', 'TEXT'], ['live_lines', 'INTEGER']]) {
       if (!columns.includes(name)) this.db.exec(`ALTER TABLE events ADD COLUMN ${name} ${type}`);
     }
     this.lastClean = -Infinity;
@@ -65,6 +65,8 @@ export class Relay {
     this.run('DELETE FROM live_activities WHERE expires <= ?', now);
     this.run("UPDATE events SET state='expired' WHERE state='queued' AND expires <= ?", now);
     this.run("UPDATE events SET context_json=NULL, details_json=NULL, start_json=NULL WHERE state!='queued' AND (context_json IS NOT NULL OR details_json IS NOT NULL OR start_json IS NOT NULL)");
+    // The sealed envelope is kept only until delivery: it is never an archive.
+    this.run("UPDATE events SET e2e_json=NULL WHERE state!='queued' AND e2e_json IS NOT NULL");
     this.run('DELETE FROM events WHERE created < ?', now - 86400000);
     this.run('DELETE FROM session_states WHERE updated < ?', now - RUNNING_TTL * 3);
   }
@@ -170,12 +172,20 @@ export class Relay {
       return { ok: true };
     }
     if (path === '/v1/events' && method === 'POST') {
-      fields(body, ['eventId', 'status', 'context', ...detailFields]);
-      let context, details;
+      fields(body, ['eventId', 'status', 'context', 'e2e', 'hostRef', 'silent', 'liveLines', ...detailFields]);
+      let context, details, sealed;
       try { context = taskContext(body.context); } catch { fail(400, 'invalid_context'); }
       try { details = agentDetails(body); } catch { fail(400, 'invalid_details'); }
+      try { sealed = e2ePayload(body); } catch (error) { fail(400, error.message ?? 'invalid_e2e'); }
       if (context && context.route !== body.eventId) fail(400, 'invalid_context');
       if (!validId(body.eventId) || !['completed', 'failed', 'attention'].includes(body.status)) fail(400, 'invalid_event');
+      if (sealed) {
+        // A private event: the category and the routing bit are all the relay
+        // keeps readable. Plaintext details exist only when the pairing opted in
+        // to Live Activity lines, and are used for that activity alone.
+        if (sealed.liveLines && !details) fail(400, 'invalid_details');
+        details = { ...(details ?? {}), visibility: sealed.silent ? 'silent' : 'banner' };
+      }
       if (typeof auth !== 'string' || auth.length !== 43) fail(401, 'unauthorized');
       const hostKey = hash(auth);
       const host = this.get('SELECT h.* FROM hosts h JOIN devices d ON d.id=h.device WHERE h.key=? AND h.active=1 AND d.active=1', hostKey);
@@ -191,7 +201,11 @@ export class Relay {
           this.get('SELECT count(*) n FROM events WHERE host_key=? AND created>?', hostKey, now - 3600000).n >= 600 ||
           this.get('SELECT count(*) n FROM events WHERE device=? AND created>?', host.device, now - 3600000).n >= 1200) fail(429, 'rate_limit');
       if (this.get('SELECT count(*) n FROM events').n >= 100000) fail(503, 'capacity');
-      this.run("INSERT INTO events (host_key,event_id,device,host,status,created,expires,due,attempts,state,context_json,details_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 'queued', ?, ?)", hostKey, body.eventId, host.device, host.host, body.status, now, now + 300000, now, context ? JSON.stringify(context) : null, details ? JSON.stringify(details) : null);
+      this.run("INSERT INTO events (host_key,event_id,device,host,status,created,expires,due,attempts,state,context_json,details_json,e2e_json,host_ref,live_lines) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 'queued', ?, ?, ?, ?, ?)", hostKey, body.eventId, host.device, host.host, body.status, now, now + 300000, now, context ? JSON.stringify(context) : null, details ? JSON.stringify(details) : null, sealed ? JSON.stringify(sealed.e2e) : null, sealed ? sealed.hostRef : null, sealed?.liveLines ? 1 : 0);
+      if (sealed) {
+        // One hostRef per pairing, learnt from the events it seals.
+        this.run('UPDATE hosts SET host_ref=?, live_lines=? WHERE device=? AND host=?', sealed.hostRef, sealed.liveLines ? 1 : 0, host.device, host.host);
+      }
       this.run('UPDATE live_activities SET latest_event_id=? WHERE device=? AND host=?', body.eventId, host.device, host.host);
       recordSession(this, host.device, host.host, details, body.status, now);
       maybeAutoStart(this, host.device, host.host, now);
@@ -248,13 +262,23 @@ export class Relay {
       this.run("UPDATE events SET state=?, due=?, apns_status=?, apns_reason=? WHERE host_key=? AND event_id=? AND state='queued'", state,
         this.now() + 15000 * 2 ** attempts, Number.isInteger(result.status) ? result.status : null,
         /^[A-Za-z]{1,80}$/.test(result.reason ?? '') ? result.reason : null, event.host_key, event.event_id);
-      if (state !== 'queued') this.run('UPDATE events SET context_json=NULL, details_json=NULL, start_json=NULL WHERE host_key=? AND event_id=?', event.host_key, event.event_id);
+      if (state !== 'queued') this.run('UPDATE events SET context_json=NULL, details_json=NULL, start_json=NULL, e2e_json=NULL WHERE host_key=? AND event_id=?', event.host_key, event.event_id);
     } finally { this.busy = false; }
   }
 }
 
 // `token(config)` signs the APNs provider JWT (node:crypto or WebCrypto);
 // `send(request)` performs the HTTP/2 POST (node:http2 or Worker fetch).
+// A sealed event carries the envelope, its hostRef and the two routing bits the
+// relay needs: silent, and whether the Live Activity may use plaintext lines.
+const sealedFields = (event, silent) => event.e2e_json ? {
+  e2e: JSON.parse(event.e2e_json), hostRef: event.host_ref,
+  // `silent` overrides when the activity already alerted (then this push is the
+  // inbox-only copy); otherwise the Hook's routing bit decides.
+  silent: silent ?? JSON.parse(event.details_json ?? '{}').visibility === 'silent',
+  liveLines: event.live_lines === 1,
+} : {};
+
 export function apnsDelivery(config, send, now = Date.now, token = providerToken) {
   let jwt, issued = 0;
   return async ({ device, event, activity, invalidateActivity, startTokenRejected }) => {
@@ -264,7 +288,8 @@ export function apnsDelivery(config, send, now = Date.now, token = providerToken
     let request = notificationRequest({ jwt, deviceToken: device.token, environment: device.environment,
       now: now(), event: { status: event.status, eventId: event.event_id, hostId: event.host,
         context: event.context_json ? JSON.parse(event.context_json) : undefined,
-        details: event.details_json ? JSON.parse(event.details_json) : undefined } });
+        details: event.details_json ? JSON.parse(event.details_json) : undefined,
+        ...sealedFields(event) } });
     // Preserve original event deadline across retries. A session's turn results
     // replace each other (Moshi keeps one row per session); others collapse
     // only pending duplicates.
@@ -307,7 +332,7 @@ export function apnsDelivery(config, send, now = Date.now, token = providerToken
       request = notificationRequest({ jwt, deviceToken: device.token, environment: device.environment,
         now: now(), event: { status: event.status, eventId: event.event_id, hostId: event.host,
           context: event.context_json ? JSON.parse(event.context_json) : undefined,
-          details: { ...details, visibility: 'silent' } } });
+          details: { ...details, visibility: 'silent' }, ...sealedFields(event, true) } });
     }
     request.headers['apns-expiration'] = String(Math.floor(event.expires / 1000));
     request.headers['apns-collapse-id'] = details?.session && details.category === 'task_complete'

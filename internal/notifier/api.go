@@ -114,11 +114,83 @@ func (m Manager) InstalledAgents() ([]string, error) {
 }
 
 func (m Manager) Pair(profile, lane, host, code string) error {
+	return m.PairE2E(profile, lane, host, code, nil, false)
+}
+
+// PairE2E pairs with the phone's notification key and the Live Activity choice.
+// A nil key keeps the plain path, as an older App does; `lines` asks for the
+// Live Activity to keep today's plaintext lines.
+func (m Manager) PairE2E(profile, lane, host, code string, key *E2EKey, lines bool) error {
+	if key != nil && !key.valid() {
+		return errConfig
+	}
 	r := newRelay()
 	if m.Transport != nil {
 		r.client.Transport = m.Transport
 	}
-	return (store{m.Directory}).pair(profile, lane, host, strings.TrimSpace(code), r)
+	return (store{m.Directory}).pair(profile, lane, host, strings.TrimSpace(code), key, lines, r)
+}
+
+// PairingSettings is the optional part of the pairing input. Everything in it
+// applies to an existing pairing as an update: `e2e` sets or rotates the phone's
+// key, `E2E: null` removes it (back to plaintext), and `liveActivityLines`
+// changes the Live Activity choice. A zero value changes nothing.
+type PairingSettings struct {
+	E2E               *E2EKey
+	RemoveE2E         bool
+	LiveActivityLines *bool
+}
+
+func (s PairingSettings) Empty() bool {
+	return s.E2E == nil && !s.RemoveE2E && s.LiveActivityLines == nil
+}
+
+// UpdatePairing changes an existing pairing's notification settings without a
+// new pairing code. The pairing itself (host, token, lane) is never changed:
+// a mismatch is an error, not a re-pointing.
+func (m Manager) UpdatePairing(profile, lane, host string, s PairingSettings) error {
+	if s.Empty() || (s.E2E != nil && (!s.E2E.valid() || s.RemoveE2E)) {
+		return errConfig
+	}
+	if !identifier.MatchString(profile) || !identifier.MatchString(host) {
+		return errConfig
+	}
+	if _, err := lanePrefix(lane); err != nil {
+		return err
+	}
+	return (store{m.Directory}).update(profile, func(c *credential) error {
+		if c.Lane != lane || c.Host != host {
+			return errConfig
+		}
+		switch {
+		case s.RemoveE2E:
+			c.E2E = nil
+		case s.E2E != nil:
+			c.E2E = s.E2E
+		}
+		if s.LiveActivityLines != nil {
+			c.LiveActivityLines = *s.LiveActivityLines
+		}
+		return nil
+	})
+}
+
+// SetLiveActivityLines changes the Live Activity choice of an existing pairing
+// without re-pairing. The pairing itself (host, token, key) is untouched.
+func (m Manager) SetLiveActivityLines(profile string, lines bool) error {
+	return (store{m.Directory}).update(profile, func(c *credential) error {
+		c.LiveActivityLines = lines
+		return nil
+	})
+}
+
+// LiveActivityLines reports the stored choice and whether the pairing is private.
+func (m Manager) LiveActivityLines(profile string) (lines, private bool, err error) {
+	c, err := (store{m.Directory}).load(profile)
+	if err != nil {
+		return false, false, err
+	}
+	return c.LiveActivityLines, c.E2E != nil, nil
 }
 func (m Manager) Paired(profile, lane, host string) (bool, error) {
 	if !identifier.MatchString(profile) || !identifier.MatchString(host) {

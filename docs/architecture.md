@@ -43,6 +43,22 @@ to the paired phone.
 - Delivery is at-least-once. A stable event id lets the relay deduplicate when
   it can.
 
+## Private notifications (end-to-end encrypted)
+
+- When a pairing carries the phone's X25519 key (`e2e` in the pairing input),
+  the notification text is sealed on this machine: an ephemeral X25519 key, a
+  key from HKDF-SHA256, then ChaCha20-Poly1305 with the pairing's `hostRef` as
+  associated data. The relay receives the category, the opaque `hostRef` and a
+  sealed envelope of at most 2800 bytes; it writes a generic alert and passes
+  the envelope through, and the Notification Service Extension on the phone
+  opens it. Nothing readable is stored by the relay beyond delivery.
+- Live Activity updates never pass through that extension. The pairing's
+  `liveActivityLines` choice decides between the state, time and `hostRef` only
+  (off, the default) and today's plaintext title and terminal lines for the
+  Live Activity alone (on). Notifications stay sealed either way.
+- `testdata/e2e_vectors.json` holds fixed test keys and a nonce so the Go and
+  Swift sides are checked against the same bytes. They are test-only.
+
 ## Services
 
 - Linux: `systemd --user`; the installer checks the user manager and explains

@@ -22,6 +22,7 @@
   // until the public repository exists; /hook hides the link while it is empty.
   "vars": {
     "METADATA_BASE": "https://downloads.potafree.net/agent/stable/metadata",
-    "DOWNLOAD_BASE": "https://downloads.potafree.net"
+    "DOWNLOAD_BASE": "https://downloads.potafree.net",
+    "SOURCE_URL": "https://github.com/chux0519/shinphony-hook"
   }
 }

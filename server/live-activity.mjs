@@ -19,7 +19,8 @@ export function createActivityTable(relay) {
       PRIMARY KEY(device, host, session));`);
   // Push-to-start (iOS 17.2+): one start token per device; auto-start is opt-in per host.
   for (const [table, name, type] of [['devices', 'start_token', 'TEXT'], ['devices', 'activity_prefix', 'TEXT'],
-    ['hosts', 'auto_activity', 'INTEGER'], ['hosts', 'host_name', 'TEXT'], ['hosts', 'last_auto_start', 'INTEGER']]) {
+    ['hosts', 'auto_activity', 'INTEGER'], ['hosts', 'host_name', 'TEXT'], ['hosts', 'last_auto_start', 'INTEGER'],
+    ['hosts', 'host_ref', 'TEXT'], ['hosts', 'live_lines', 'INTEGER']]) {
     if (!relay.db.columns(table).includes(name)) relay.db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${type}`);
   }
 }
@@ -69,14 +70,14 @@ export function queueActivitySync(relay, device, host, now) {
   const agg = aggregate(relay, device, host, now);
   const lead = agg.attention[0] ?? agg.running[0];
   if (!lead) return null;
-  const key = relay.get('SELECT key FROM hosts WHERE device=? AND host=? AND active=1', device, host)?.key;
-  if (!key) return null;
+  const row = relay.get('SELECT key, host_ref, live_lines FROM hosts WHERE device=? AND host=? AND active=1', device, host);
+  if (!row?.key) return null;
   const eventId = 'sync-' + randomBytes(12).toString('hex');
   const details = { category: agg.attention.length ? 'approval_required' : 'task_started', agent: lead.agent,
     project: lead.project, visibility: 'silent' };
-  relay.run(`INSERT INTO events (host_key,event_id,device,host,status,created,expires,due,attempts,state,context_json,details_json,live_only)
-    VALUES (?,?,?,?,?,?,?,?,0,'queued',NULL,?,1)`, key, eventId, device, host,
-  agg.attention.length ? 'attention' : 'completed', now, now + 300000, now, JSON.stringify(details));
+  relay.run(`INSERT INTO events (host_key,event_id,device,host,status,created,expires,due,attempts,state,context_json,details_json,host_ref,live_lines,live_only)
+    VALUES (?,?,?,?,?,?,?,?,0,'queued',NULL,?,?,?,1)`, row.key, eventId, device, host,
+  agg.attention.length ? 'attention' : 'completed', now, now + 300000, now, JSON.stringify(details), row.host_ref ?? null, row.live_lines ?? 0);
   relay.run('UPDATE live_activities SET latest_event_id=? WHERE device=? AND host=?', eventId, device, host);
   return eventId;
 }
@@ -84,7 +85,7 @@ export function queueActivitySync(relay, device, host, now) {
 // Live Activity: queue a push-to-start. The ticket travels only in the APNs
 // payload's attributes; the relay keeps its hash.
 export function maybeAutoStart(relay, device, host, now) {
-  const row = relay.get(`SELECT h.key, h.host_name, h.last_auto_start, d.start_token, d.activity_prefix FROM hosts h
+  const row = relay.get(`SELECT h.key, h.host_name, h.last_auto_start, h.host_ref, h.live_lines, d.start_token, d.activity_prefix FROM hosts h
     JOIN devices d ON d.id=h.device WHERE h.device=? AND h.host=? AND h.active=1 AND d.active=1 AND h.auto_activity=1`, device, host);
   if (!row?.start_token || !hostName(row.host_name)) return null;
   if (now - (row.last_auto_start ?? 0) < AUTO_START_INTERVAL) return null;
@@ -101,9 +102,10 @@ export function maybeAutoStart(relay, device, host, now) {
   device, PENDING + randomBytes(12).toString('hex'), host, hash(ticket), now + PENDING_START_TTL, eventId);
   const details = { category: agg.attention.length ? 'approval_required' : 'task_started', agent: lead.agent,
     project: lead.project, visibility: 'silent' };
-  relay.run(`INSERT INTO events (host_key,event_id,device,host,status,created,expires,due,attempts,state,context_json,details_json,live_only,start_json)
-    VALUES (?,?,?,?,?,?,?,?,0,'queued',NULL,?,2,?)`, row.key, eventId, device, host,
+  relay.run(`INSERT INTO events (host_key,event_id,device,host,status,created,expires,due,attempts,state,context_json,details_json,host_ref,live_lines,live_only,start_json)
+    VALUES (?,?,?,?,?,?,?,?,0,'queued',NULL,?,?,?,2,?)`, row.key, eventId, device, host,
   agg.attention.length ? 'attention' : 'completed', now, now + PENDING_START_TTL, now, JSON.stringify(details),
+  row.host_ref ?? null, row.live_lines ?? 0,
   JSON.stringify({ hostId: host, hostName: row.host_name, ticket, prefix: row.activity_prefix ?? '' }));
   relay.run('UPDATE hosts SET last_auto_start=? WHERE device=? AND host=?', now, device, host);
   return eventId;
@@ -188,13 +190,40 @@ export function handleActivity(relay, method, path, auth, body) {
   fail(404, 'not_found');
 }
 
+// The state a widget shows, without any text. The plaintext activity and the
+// private one share it, so both agree on working / attention / done.
+const baseState = (category, status) => ['task_started', 'tool_running'].includes(category) ? 'working'
+  : ['session_started', 'tool_finished'].includes(category) ? 'waiting'
+  : category === 'session_ended' ? 'ended' : status;
+
+export function activityState(event, agg = event.aggregate) {
+  const details = event.details_json ? JSON.parse(event.details_json) : {};
+  const state = baseState(details.category, event.status);
+  const running = agg?.running?.length ?? 0, attention = agg?.attention?.length ?? 0;
+  if (state !== 'attention' && attention > 0) return 'attention';
+  if (state !== 'attention' && running > 0) return 'working';
+  return state;
+}
+
+// A private Live Activity: only the state, when this event happened and the
+// opaque hostRef. The widget resolves the host's name from its own App Group,
+// so no title and no terminal lines ever reach the relay. `status`/`updatedAt`
+// are the names the current widget decodes; `state`/`startedAt` are the same
+// values under the plan's names.
+export function privateActivityContent(event, timestamp, agg = event.aggregate) {
+  const created = Number(event.created);
+  const state = activityState(event, agg);
+  return { status: state, state, hostRef: event.host_ref,
+    startedAt: Math.floor((created > 0 ? created : timestamp * 1000) / 1000), updatedAt: timestamp };
+}
+
 export function activityContent(event, timestamp, agg = event.aggregate) {
+  // Sealed pairing without the plaintext-lines opt-in: nothing readable.
+  if (event.host_ref && event.live_lines !== 1) return privateActivityContent(event, timestamp, agg);
   const details = event.details_json ? JSON.parse(event.details_json) : {};
   const context = event.context_json ? JSON.parse(event.context_json) : undefined;
   const category = details.category;
-  let status = ['task_started', 'tool_running'].includes(category) ? 'working'
-    : ['session_started', 'tool_finished'].includes(category) ? 'waiting'
-    : category === 'session_ended' ? 'ended' : event.status;
+  let status = baseState(category, event.status);
   let title = displayText(details.title || context?.title || '');
   let summary = displayText(context?.preview || details.body || '');
   if (category === 'question' && details.body) {
@@ -227,11 +256,18 @@ export function activityContent(event, timestamp, agg = event.aggregate) {
     }
     status = 'working';
   }
+  // Opted-in plaintext preview: the terminal lines this pairing allows, for a
+  // widget that shows them as a list. Legacy plaintext hosts keep their look.
+  const lines = event.host_ref && event.live_lines === 1 && context?.preview
+    ? context.preview.split('\n').map(line => line.trim()).filter(Boolean).slice(0, 6) : [];
   // Additive: older widgets ignore category and still understand status.
   return { status, ...(category ? { category } : {}), agent: details.agent ?? (context ? 'codex' : ''),
     title, summary, project: details.project || context?.session || '',
     ...(conversation ? { conversation } : {}), ...(helper ? { helper } : {}),
     updatedAt: timestamp, eventId: event.event_id,
+    // Additive: the widget resolves the host's name from its App Group.
+    ...(event.host_ref ? { hostRef: event.host_ref } : {}),
+    ...(lines.length ? { lines } : {}),
     // JSON string keeps the native Codable schema stable across context versions.
     contextJSON: context ? JSON.stringify(context) : '' };
 }

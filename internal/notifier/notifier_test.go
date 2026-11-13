@@ -31,7 +31,7 @@ func fixtureStore(t *testing.T) store {
 	return s
 }
 func fixtureCredential() credential {
-	return credential{1, "production", "host-one", strings.Repeat("A", 43)}
+	return credential{Schema: 1, Lane: "production", Host: "host-one", Token: strings.Repeat("A", 43)}
 }
 func fixtureRelay(t *testing.T, h http.HandlerFunc) relay {
 	t.Helper()
@@ -96,10 +96,10 @@ func TestPairInputAndExistingProfile(t *testing.T) {
 		}
 		json.NewEncoder(w).Encode(map[string]string{"hostToken": strings.Repeat("A", 43), "hostId": "host-one"})
 	})
-	if e := s.pair("phone", "production", "host-one", strings.Repeat("B", 43), r); e != nil {
+	if e := s.pair("phone", "production", "host-one", strings.Repeat("B", 43), nil, false, r); e != nil {
 		t.Fatal(e)
 	}
-	if e := s.pair("phone", "production", "host-one", strings.Repeat("B", 43), r); e == nil {
+	if e := s.pair("phone", "production", "host-one", strings.Repeat("B", 43), nil, false, r); e == nil {
 		t.Fatal("overwrote profile")
 	}
 	if calls.Load() != 1 {
@@ -116,7 +116,7 @@ func TestPairAmbiguousResultNeverRetries(t *testing.T) {
 			var calls atomic.Int32
 			r := fixtureRelay(t, func(w http.ResponseWriter, q *http.Request) { calls.Add(1); io.WriteString(w, body) })
 			for i := 0; i < 2; i++ {
-				if e := s.pair("phone", "production", "host-one", strings.Repeat("B", 43), r); e == nil {
+				if e := s.pair("phone", "production", "host-one", strings.Repeat("B", 43), nil, false, r); e == nil {
 					t.Fatal("accepted bad pairing")
 				}
 			}
@@ -210,5 +210,68 @@ func TestHookDoesNotAffectTask(t *testing.T) {
 		if code := run([]string{"codex-hook", "missing"}, strings.NewReader(raw), &out, &errOut, newRelay()); code != 0 || out.String() != "{}\n" || errOut.Len() != 0 {
 			t.Fatal(code, out.String(), errOut.String())
 		}
+	}
+}
+
+// The pairing update path: an existing pairing gains, rotates and drops the
+// notification key, and changes the Live Activity choice, without a new code.
+func TestUpdatePairingSettings(t *testing.T) {
+	s := fixtureStore(t)
+	c := fixtureCredential()
+	if e := s.saveNew("phone", c); e != nil {
+		t.Fatal(e)
+	}
+	// A canonical base64url X25519 public key (32 zero bytes encode to 42 "A"s
+	// and a final "A"; use a real 43-character value instead of a fixture).
+	key := &E2EKey{V: 1, Pub: "J-CzYHdxTDmm0sRHyjP6DnMp4sg_AjQ9FmMBAi7Svhw"}
+	lines := true
+	m := Manager{Directory: s.dir}
+	if e := m.UpdatePairing("phone", "production", "host-one", PairingSettings{E2E: key, LiveActivityLines: &lines}); e != nil {
+		t.Fatal(e)
+	}
+	got, e := s.load("phone")
+	if e != nil || got.E2E == nil || got.E2E.Pub != key.Pub || !got.LiveActivityLines || got.Token != c.Token {
+		t.Fatal(got, e)
+	}
+	// Rotating replaces the key.
+	rotated := &E2EKey{V: 1, Pub: "EQkcev3Vb43WMXj6x7lHAYhvzCZRZmZ5TiRkpJyXUmU"}
+	if e = m.UpdatePairing("phone", "production", "host-one", PairingSettings{E2E: rotated}); e != nil {
+		t.Fatal(e)
+	}
+	if got, e = s.load("phone"); e != nil || got.E2E.Pub != rotated.Pub || !got.LiveActivityLines {
+		t.Fatal(got, e)
+	}
+	// A different host or lane is refused and changes nothing.
+	before, _ := os.ReadFile(filepath.Join(s.dir, "phone.json"))
+	if e = m.UpdatePairing("phone", "production", "host-two", PairingSettings{E2E: key}); e == nil {
+		t.Fatal("updated another host")
+	}
+	if e = m.UpdatePairing("phone", "sandbox", "host-one", PairingSettings{E2E: key}); e == nil {
+		t.Fatal("updated another lane")
+	}
+	after, _ := os.ReadFile(filepath.Join(s.dir, "phone.json"))
+	if !bytes.Equal(before, after) {
+		t.Fatal("a refused update rewrote the credential")
+	}
+	// Removing the key keeps the pairing and the choice.
+	off := false
+	if e = m.UpdatePairing("phone", "production", "host-one", PairingSettings{RemoveE2E: true, LiveActivityLines: &off}); e != nil {
+		t.Fatal(e)
+	}
+	if got, e = s.load("phone"); e != nil || got.E2E != nil || got.LiveActivityLines || got.Token != c.Token {
+		t.Fatal(got, e)
+	}
+	if _, private, e := m.LiveActivityLines("phone"); e != nil || private {
+		t.Fatal(private, e)
+	}
+	// An empty settings value and an unpaired profile are errors, never writes.
+	if e = m.UpdatePairing("phone", "production", "host-one", PairingSettings{}); e == nil {
+		t.Fatal("empty update accepted")
+	}
+	if e = m.UpdatePairing("nobody", "production", "host-one", PairingSettings{E2E: key}); e == nil {
+		t.Fatal("update created a pairing")
+	}
+	if _, e = os.Stat(filepath.Join(s.dir, "nobody.json")); !os.IsNotExist(e) {
+		t.Fatal("update created a credential")
 	}
 }

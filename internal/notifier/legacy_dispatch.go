@@ -203,7 +203,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer, r relay) int {
 		if e != nil {
 			return fail(errConfig)
 		}
-		if e = s.pair(args[1], args[2], args[3], strings.TrimSpace(string(raw)), r); e != nil {
+		if e = s.pair(args[1], args[2], args[3], strings.TrimSpace(string(raw)), nil, false, r); e != nil {
 			return fail(e)
 		}
 		fmt.Fprintln(out, `{"paired":true,"deliveryVerified":false}`)

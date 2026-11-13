@@ -19,12 +19,36 @@ type result struct {
 	After time.Duration
 }
 type sender func(context.Context, Event) result
+
+// taskContextOf reads the projection any caller may have attached.
+func taskContextOf(ctx context.Context) (taskContext, bool) {
+	switch value := ctx.Value(taskContextKey{}).(type) {
+	case taskContext:
+		return value, true
+	case *taskContext:
+		if value != nil {
+			return *value, true
+		}
+	case *localSnapshot:
+		if value != nil {
+			return value.taskContext, true
+		}
+	}
+	return taskContext{}, false
+}
+
 type agentDetailsKey struct{}
 type credential struct {
 	Schema int    `json:"schema"`
 	Lane   string `json:"lane"`
 	Host   string `json:"hostId"`
 	Token  string `json:"hostToken"`
+	// Private notifications: the phone's key. `liveActivityLines` asks for the
+	// Live Activity to keep today's plaintext title and terminal lines; off (the
+	// default, and the only mode an older App can mean) keeps it to state, time
+	// and hostRef.
+	E2E               *e2eKey `json:"e2e,omitempty"`
+	LiveActivityLines bool    `json:"liveActivityLines,omitempty"`
 }
 
 func deliver(dir string, client *http.Client) sender {
@@ -53,6 +77,14 @@ func deliver(dir string, client *http.Client) sender {
 		if json.Unmarshal(raw, &c) != nil || c.Schema != 1 || !identifier.MatchString(c.Host) || len(c.Token) != 43 || !identifier.MatchString(c.Token) {
 			return result{Code: "invalid_credential"}
 		}
+		var phonePub []byte
+		if c.E2E != nil {
+			// A malformed key never falls back to plaintext: it stops delivery.
+			if c.E2E.V != 1 || !validE2EPublicKey(c.E2E.Pub) {
+				return result{Code: "invalid_credential"}
+			}
+			phonePub, _ = e2ePublicKey(c.E2E.Pub)
+		}
 		prefix := ""
 		switch c.Lane {
 		case "sandbox":
@@ -62,13 +94,53 @@ func deliver(dir string, client *http.Client) sender {
 			return result{Code: "invalid_credential"}
 		}
 		fields := map[string]any{"eventId": e.ID, "status": e.Status}
-		if c := ctx.Value(taskContextKey{}); c != nil {
-			fields["context"] = c
-		}
+		snapshot, hasContext := taskContextOf(ctx)
 		// v2 agent-event details are top-level fields of the relay request.
 		details, hasDetails := ctx.Value(agentDetailsKey{}).(json.RawMessage)
-		if hasDetails && json.Unmarshal(details, &fields) != nil {
-			return result{Code: "invalid_event"}
+		if c.E2E != nil {
+			// Private: the text is sealed to the phone and only the routing the
+			// relay needs stays readable.
+			var d eventDetails
+			if hasDetails && json.Unmarshal(details, &d) != nil {
+				return result{Code: "invalid_event"}
+			}
+			var context *taskContext
+			if hasContext {
+				context = &snapshot
+			}
+			private, err := e2eFields(randomReader, phonePub, e2eHostRef(e.Profile), &d, context)
+			if err != nil {
+				if identifier.MatchString(err.Error()) {
+					return result{Code: err.Error()}
+				}
+				return result{Code: "e2e_failed"}
+			}
+			for key, value := range private {
+				fields[key] = value
+			}
+			if c.LiveActivityLines {
+				// Opted in: today's title and terminal lines travel in the clear for
+				// the Live Activity. The alert is still the sealed envelope above.
+				for _, field := range []struct{ name, value string }{
+					{"agent", d.Agent}, {"session", d.Session}, {"title", d.Title}, {"body", d.Body}, {"project", d.Project},
+				} {
+					if field.value != "" {
+						fields[field.name] = field.value
+					}
+				}
+				if hasContext {
+					fields["context"] = context
+				}
+				fields["liveLines"] = true
+			}
+			delete(fields, "visibility")
+		} else {
+			if hasContext {
+				fields["context"] = snapshot
+			}
+			if hasDetails && json.Unmarshal(details, &fields) != nil {
+				return result{Code: "invalid_event"}
+			}
 		}
 		fields["eventId"], fields["status"] = e.ID, e.Status
 		body, _ := json.Marshal(fields)
@@ -89,6 +161,11 @@ func deliver(dir string, client *http.Client) sender {
 				return result{Code: "accepted"}
 			}
 			return result{Code: "invalid_response", Retry: true}
+		}
+		if resp.StatusCode == 400 && c.E2E != nil {
+			// A relay without e2e support. Never degrade a private event to the
+			// plaintext path: the user chose encryption, so it is dropped instead.
+			return result{Code: "relay_v1_e2e_unsupported"}
 		}
 		if resp.StatusCode == 400 && hasDetails {
 			var r struct {

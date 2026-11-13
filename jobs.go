@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -148,6 +149,27 @@ func jobsWorker(ctx context.Context, q *queue, manager notifier.Manager, exe str
 		}
 	}
 }
+
+// pairingSettings reads the optional update fields of the pairing input. An
+// absent `e2e` leaves the stored key alone, `null` removes it (the pairing goes
+// back to plaintext), and an object sets or rotates it. A malformed key is a
+// clear error that never touches the stored pairing.
+func pairingSettings(raw json.RawMessage, lines *bool) (notifier.PairingSettings, error) {
+	s := notifier.PairingSettings{LiveActivityLines: lines}
+	if len(raw) > 0 {
+		if string(bytes.TrimSpace(raw)) == "null" {
+			s.RemoveE2E = true
+		} else {
+			var key notifier.E2EKey
+			if json.Unmarshal(raw, &key) != nil || key.V != 1 || !validE2EPublicKey(key.Pub) {
+				return s, errors.New("invalid_e2e_key")
+			}
+			s.E2E = &key
+		}
+	}
+	return s, nil
+}
+
 func registerSetup(mux *http.ServeMux, q *queue, manager notifier.Manager) {
 	mux.HandleFunc("POST /v1/reset-profile", func(w http.ResponseWriter, r *http.Request) {
 		var p struct {
@@ -205,7 +227,17 @@ func registerSetup(mux *http.ServeMux, q *queue, manager notifier.Manager) {
 			http.Error(w, "pairing_needs_reconciliation", 409)
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]any{"paired": paired})
+		out := map[string]any{"paired": paired, "e2eSupported": true}
+		if paired {
+			// The App shows the Live Activity choice per host; `private` tells it
+			// this pairing carries a key. `e2eSupported` says this Hook accepts the
+			// key on the pairing update path, so a legacy pairing can still gain
+			// one without re-pairing.
+			if lines, private, e := manager.LiveActivityLines(p.Profile); e == nil {
+				out["liveActivityLines"], out["private"] = lines, private
+			}
+		}
+		json.NewEncoder(w).Encode(out)
 	})
 	mux.HandleFunc("GET /v1/setup-latest/{profile}", func(w http.ResponseWriter, r *http.Request) {
 		profile := r.PathValue("profile")
@@ -238,6 +270,12 @@ func registerSetup(mux *http.ServeMux, q *queue, manager notifier.Manager) {
 			Lane    string `json:"lane"`
 			Host    string `json:"hostId"`
 			Code    string `json:"code"`
+			// The pairing input may carry the phone's notification key and the
+			// Live Activity choice; both are optional so an older App still pairs.
+			// `e2e` is raw so that an absent key (leave it alone), `null` (remove
+			// it) and an object (set or rotate it) stay distinguishable.
+			E2E               json.RawMessage `json:"e2e,omitempty"`
+			LiveActivityLines *bool           `json:"liveActivityLines,omitempty"`
 		}
 		d := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096))
 		d.DisallowUnknownFields()
@@ -245,9 +283,47 @@ func registerSetup(mux *http.ServeMux, q *queue, manager notifier.Manager) {
 			http.Error(w, "invalid_pairing", 400)
 			return
 		}
+		// A malformed key is a clear error, never a silent fall back to plaintext.
+		settings, err := pairingSettings(p.E2E, p.LiveActivityLines)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+		lines := p.LiveActivityLines != nil && *p.LiveActivityLines
 		paired, err := manager.Paired(p.Profile, p.Lane, p.Host)
-		if err == nil && !paired {
-			err = manager.Pair(p.Profile, p.Lane, p.Host, p.Code)
+		if err == nil && paired {
+			// An existing pairing accepts the same fields as an update, without a
+			// new code: set, rotate or remove the key, and change the Live Activity
+			// choice. Host, lane and token never change here.
+			if settings.Empty() {
+				json.NewEncoder(w).Encode(map[string]any{"paired": true, "deliveryVerified": false})
+				return
+			}
+			if err = manager.UpdatePairing(p.Profile, p.Lane, p.Host, settings); err != nil {
+				code := err.Error()
+				if !identifier.MatchString(code) {
+					code = "pairing_update_failed"
+				}
+				http.Error(w, code, 409)
+				return
+			}
+			updated := []string{}
+			if settings.RemoveE2E || settings.E2E != nil {
+				updated = append(updated, "e2e")
+			}
+			if settings.LiveActivityLines != nil {
+				updated = append(updated, "liveActivityLines")
+			}
+			private, lines := false, false
+			if value, keyed, e := manager.LiveActivityLines(p.Profile); e == nil {
+				lines, private = value, keyed
+			}
+			json.NewEncoder(w).Encode(map[string]any{"paired": true, "updated": updated,
+				"private": private, "liveActivityLines": lines})
+			return
+		}
+		if err == nil {
+			err = manager.PairE2E(p.Profile, p.Lane, p.Host, p.Code, settings.E2E, lines)
 		}
 		if err != nil {
 			code := err.Error()
