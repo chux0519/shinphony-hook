@@ -182,7 +182,7 @@ home=$(home_for unsupported)
 log=$work/curl.unsupported
 run_plain "$script" "$home" FAKE_OS=FreeBSD FAKE_CURL_LOG="$log"
 expect_code 'unsupported OS is refused' 2
-expect_text 'unsupported OS points at the phone command' 'On Windows use Shinphony -> Add server'
+expect_text 'unsupported OS points at the PowerShell script' 'On Windows, run this in PowerShell: irm https://shinphony.app/pair.ps1 | iex'
 expect_no_file 'unsupported OS writes nothing' "$home/.shinphony-agent"
 [ -s "$log" ] && not_ok 'unsupported OS never downloads' || ok 'unsupported OS never downloads'
 

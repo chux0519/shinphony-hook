@@ -95,6 +95,11 @@ func (m Manager) DetectedAgents() ([]string, error) {
 			agents = append(agents, entry.name)
 		}
 	}
+	// Antigravity shares ~/.gemini with the Gemini CLI, so only its own CLI or
+	// data directories count, never the shared config directory.
+	if agyDetected(home) {
+		agents = append(agents, "agy")
+	}
 	return agents, nil
 }
 
@@ -102,7 +107,7 @@ func (m Manager) DetectedAgents() ([]string, error) {
 // agent integration as a side effect of a background binary update.
 func (m Manager) InstalledAgents() ([]string, error) {
 	var agents []string
-	for _, agent := range []string{"codex", "claude", "dsh"} {
+	for _, agent := range []string{"codex", "claude", "dsh", "agy"} {
 		_, err := (store{m.Directory}).installRecord(agent)
 		if err == nil {
 			agents = append(agents, agent)
@@ -235,6 +240,8 @@ func (m Manager) Configure(agent, exe string, apply bool) error {
 		return s.configureAgentWith(agent, claudeConfigPath(home), exe, apply, proposedClaude, stripClaude)
 	case "dsh":
 		return s.configureDSH(dshConfigPath(home), exe, apply)
+	case "agy":
+		return s.configureAgy(agyConfigPath(home), exe, apply)
 	}
 	return errConfig
 }
@@ -261,6 +268,8 @@ func (m Manager) Uninstall(agent string) error {
 		return (store{m.Directory}).uninstallAgentWith(agent, stripClaude)
 	case "dsh":
 		return (store{m.Directory}).uninstallDSH()
+	case "agy":
+		return (store{m.Directory}).uninstallAgy()
 	}
 	return errConfig
 }

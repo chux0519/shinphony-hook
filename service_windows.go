@@ -10,13 +10,20 @@ import (
 )
 
 func psLiteral(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
-func powershell(script string) error {
+
+// powershellArgument is the -EncodedCommand value for a fixed script: PowerShell
+// is started with UTF-16 script text, never with interpolated command-line
+// arguments.
+func powershellArgument(script string) string {
 	words := utf16.Encode([]rune("$ErrorActionPreference='Stop'; $ProgressPreference='SilentlyContinue'; " + script))
 	raw := make([]byte, 2*len(words))
 	for i, w := range words {
 		binary.LittleEndian.PutUint16(raw[2*i:], w)
 	}
-	return serviceCommand("powershell.exe", "-NoProfile", "-NonInteractive", "-EncodedCommand", base64.StdEncoding.EncodeToString(raw))
+	return base64.StdEncoding.EncodeToString(raw)
+}
+func powershell(script string) error {
+	return serviceCommand("powershell.exe", "-NoProfile", "-NonInteractive", "-EncodedCommand", powershellArgument(script))
 }
 func installService(dir, creds string) error {
 	exe, err := serviceExecutable(dir)

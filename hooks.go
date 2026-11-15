@@ -94,15 +94,22 @@ func hookCLI(kind string, args []string) {
 	// A malformed hook or unreachable daemon must never block the agent loop.
 	timer := time.AfterFunc(3*time.Second, func() { os.Exit(0) })
 	defer timer.Stop()
-	nativeHook := kind == "claude-hook-all" || kind == "dsh-hook-all" || kind == "codex-hook-all"
+	nativeHook := kind == "claude-hook-all" || kind == "dsh-hook-all" || kind == "codex-hook-all" || kind == "agy-hook"
 	var feedback map[string]any
 	if nativeHook {
-		// No decision: the agent proceeds (or asks in the terminal) as usual.
+		// Event-specific neutral output. Antigravity documents a required
+		// `decision` for PreToolUse and Stop: `allow` delegates to the next hook
+		// or the default policy and permits the stop, so it never approves a tool
+		// or keeps the loop alive. Every other event injects nothing.
 		defer func() {
-			if feedback == nil {
-				os.Stdout.WriteString("{}\n")
-			} else {
+			switch {
+			case feedback != nil:
 				json.NewEncoder(os.Stdout).Encode(feedback)
+			case kind == "agy-hook":
+				_, neutral := agyNeutralOutput(args)
+				os.Stdout.Write(neutral)
+			default:
+				os.Stdout.WriteString("{}\n")
 			}
 		}()
 	}
@@ -151,9 +158,18 @@ func hookCLI(kind string, args []string) {
 	var id, status string
 	var ok bool
 	if nativeHook {
-		var h notifier.HookInfo
-		if h, ok = notifier.ParseHook(raw); ok {
-			agentEv, ok = agentEventFromHook(strings.TrimSuffix(kind, "-hook-all"), h, os.Getenv)
+		if kind == "agy-hook" {
+			// The installed command names the event; it is never guessed from stdin.
+			if len(args) == 1 {
+				if h, parsed := notifier.ParseAgyHook(args[0], raw); parsed {
+					agentEv, ok = agentEventFromAgy(h, os.Getenv)
+				}
+			}
+		} else {
+			var h notifier.HookInfo
+			if h, ok = notifier.ParseHook(raw); ok {
+				agentEv, ok = agentEventFromHook(strings.TrimSuffix(kind, "-hook-all"), h, os.Getenv)
+			}
 		}
 	} else {
 		id, status, ok = notifier.Extract(kind, raw)
@@ -195,6 +211,20 @@ func hookCLI(kind string, args []string) {
 		}
 	}
 	_ = postHook(ctx, dir, hookEvent{ID: id, Status: status, Source: source})
+}
+
+// agyNeutralOutput is the only response an Antigravity hook may give: no
+// auto_approve, no permissionOverrides, no injected steps, no forced continue.
+// It is written even when the payload is malformed or the daemon is away.
+func agyNeutralOutput(args []string) (string, []byte) {
+	if len(args) != 1 {
+		return "", []byte("{}\n")
+	}
+	switch args[0] {
+	case "PreToolUse", "Stop":
+		return args[0], []byte(`{"decision":"allow"}` + "\n")
+	}
+	return args[0], []byte("{}\n")
 }
 
 func forwardComputerUse(original []string, payload string) {

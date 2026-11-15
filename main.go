@@ -22,6 +22,19 @@ import (
 
 const version = "0.1.0-dev"
 
+// hookKind reports the hook subcommand this invocation is running as. Every
+// agent gets its own name so the installed command decides the payload format.
+func hookKind(args []string) (string, bool) {
+	if len(args) == 0 {
+		return "", false
+	}
+	switch args[0] {
+	case "codex-notify-all", "codex-notify-chain", "claude-hook-all", "dsh-hook-all", "codex-hook-all", "agy-hook":
+		return args[0], true
+	}
+	return "", false
+}
+
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "task-intent" {
 		output, err := taskIntentOutput(os.Args[2:])
@@ -33,8 +46,8 @@ func main() {
 		return
 	}
 
-	if len(os.Args) > 1 && (os.Args[1] == "codex-notify-all" || os.Args[1] == "codex-notify-chain" || os.Args[1] == "claude-hook-all" || os.Args[1] == "dsh-hook-all" || os.Args[1] == "codex-hook-all") {
-		hookCLI(os.Args[1], os.Args[2:])
+	if kind, ok := hookKind(os.Args[1:]); ok {
+		hookCLI(kind, os.Args[2:])
 		return
 	}
 	if err := run(); err != nil {
@@ -62,6 +75,9 @@ func run() error {
 	}
 	if len(args) > 0 && args[0] == "keys" {
 		return keysCLI(args[1:], os.Stdin, os.Stdout)
+	}
+	if len(args) > 0 && args[0] == "windows-sshd" {
+		return windowsSSHDCLI(args[1:], os.Stdout)
 	}
 	if !filepath.IsAbs(*creds) {
 		return errors.New("absolute_credentials_path_required")

@@ -6,6 +6,8 @@
 // /hook; it stays hidden while unset or not an https URL.
 
 import template from '../pair.sh.tmpl';
+import sshTemplate from '../ssh.ps1.tmpl';
+import ps1Template from '../pair.ps1.tmpl';
 import { PINNED_ROOT } from './pinned-root.mjs';
 import { createSite, DEFAULT_DOWNLOAD_BASE, DEFAULT_METADATA_BASE } from './index.mjs';
 
@@ -19,7 +21,7 @@ function configuredSite(env) {
   const sourceUrl = (env?.SOURCE_URL || '').trim();
   const key = `${metadataBase}|${downloadBase}|${sourceUrl}`;
   if (!site || key !== siteKey) {
-    site = createSite({ root: PINNED_ROOT, template, metadataBase, downloadBase, sourceUrl });
+    site = createSite({ root: PINNED_ROOT, template, sshTemplate, ps1Template, metadataBase, downloadBase, sourceUrl });
     siteKey = key;
   }
   return site;

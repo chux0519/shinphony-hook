@@ -63,7 +63,7 @@ export function aggregate(relay, device, host, now) {
   return { running: rows.filter(r => r.state === 'running'), attention: rows.filter(r => r.state === 'attention') };
 }
 
-const agentName = agent => ({ codex: 'Codex', claude: 'Claude Code', dsh: 'DSH' })[agent] || 'A task';
+const agentName = agent => ({ codex: 'Codex', claude: 'Claude Code', dsh: 'DSH', agy: 'Antigravity' })[agent] || 'A task';
 
 // Follow-time sync: the current state as one Live-Activity-only event.
 export function queueActivitySync(relay, device, host, now) {

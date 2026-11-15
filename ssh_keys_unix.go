@@ -2,123 +2,30 @@
 
 package main
 
+// Unix storage for `keys`: an open descriptor on ~/.ssh with the ownership,
+// mode and link checks the installer has always used. The contract itself,
+// including the journal's state machine, lives in ssh_keys.go.
+
 import (
 	"bytes"
-	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/binary"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"io"
 	"os"
-	"regexp"
-	"sort"
-	"strings"
 
 	"golang.org/x/sys/unix"
 )
 
-const sshKeyFileLimit = 1024 * 1024
+// sshKeyStat is Unix's file identity: the inode and device the snapshot came
+// from, so a replace between read and write is detected.
+type sshKeyStat = unix.Stat_t
 
-type sshKeyRecord struct {
-	ID          string `json:"id"`
-	PublicKey   string `json:"publicKey"`
-	Fingerprint string `json:"fingerprint"`
-	State       string `json:"state"`
-}
-type sshKeyJournal struct {
-	Schema int                     `json:"schema"`
-	Keys   map[string]sshKeyRecord `json:"keys"`
-}
-type sshKeyRequest struct {
-	ID        string `json:"id"`
-	PublicKey string `json:"publicKey"`
-}
-type sshKeySnapshot struct {
-	data []byte
-	stat *unix.Stat_t
-}
-
-var sshKeyID = regexp.MustCompile(`^se-p256:[a-fA-F0-9-]{36}$`)
-
-func keysCLI(args []string, input io.Reader, output io.Writer) error {
-	if len(args) == 2 && args[0] == "revoke" && sshKeyID.MatchString(args[1]) {
-		input = strings.NewReader(`{"id":"` + args[1] + `"}`)
-		args = args[:1]
-	}
-	if len(args) != 1 || (args[0] != "install" && args[0] != "list" && args[0] != "revoke" && args[0] != "preview") {
-		return errors.New("usage: keys list | revoke <key-id> | preview|install|revoke (request JSON on stdin)")
-	}
+func keysPrivilegeCheck() error {
 	if os.Geteuid() == 0 {
 		return errors.New("keys_root_not_supported")
 	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return errors.New("keys_home_unavailable")
-	}
-	var request sshKeyRequest
-	if args[0] != "list" {
-		raw, err := io.ReadAll(io.LimitReader(input, 8193))
-		if err != nil || len(raw) > 8192 {
-			return errors.New("keys_invalid_input")
-		}
-		decoder := json.NewDecoder(bytes.NewReader(raw))
-		decoder.DisallowUnknownFields()
-		if decoder.Decode(&request) != nil || decoder.Decode(new(any)) != io.EOF || !sshKeyID.MatchString(request.ID) {
-			return errors.New("keys_invalid_input")
-		}
-	}
-	result, err := manageSSHKey(home, args[0], request)
-	if err != nil {
-		return err
-	}
-	return json.NewEncoder(output).Encode(result)
-}
-
-func validateP256PublicKey(value string) (string, error) {
-	fields := strings.Split(value, " ")
-	if len(value) > 2048 || len(fields) != 2 || fields[0] != "ecdsa-sha2-nistp256" {
-		return "", errors.New("keys_invalid_public_key")
-	}
-	raw, err := base64.StdEncoding.Strict().DecodeString(fields[1])
-	if err != nil {
-		return "", errors.New("keys_invalid_public_key")
-	}
-	remaining := raw
-	field := func() ([]byte, bool) {
-		if len(remaining) < 4 {
-			return nil, false
-		}
-		n := binary.BigEndian.Uint32(remaining)
-		remaining = remaining[4:]
-		if uint64(n) > uint64(len(remaining)) {
-			return nil, false
-		}
-		v := remaining[:n]
-		remaining = remaining[n:]
-		return v, true
-	}
-	algorithm, ok := field()
-	if !ok || string(algorithm) != "ecdsa-sha2-nistp256" {
-		return "", errors.New("keys_invalid_public_key")
-	}
-	curve, ok := field()
-	if !ok || string(curve) != "nistp256" {
-		return "", errors.New("keys_invalid_public_key")
-	}
-	point, ok := field()
-	if !ok || len(remaining) != 0 {
-		return "", errors.New("keys_invalid_public_key")
-	}
-	x, y := elliptic.Unmarshal(elliptic.P256(), point)
-	if x == nil || y == nil {
-		return "", errors.New("keys_invalid_public_key")
-	}
-	hash := sha256.Sum256(raw)
-	return "SHA256:" + base64.RawStdEncoding.EncodeToString(hash[:]), nil
+	return nil
 }
 
 func sshKeyDirectory(home string, create bool) (int, error) {
@@ -223,46 +130,23 @@ func sshKeyWrite(dir int, name string, data []byte, expected sshKeySnapshot) err
 	return nil
 }
 
-func manageSSHKey(home, operation string, request sshKeyRequest) (any, error) {
-	if operation == "preview" {
-		return previewSSHKey(home, request)
+// unixSSHKeyStore adapts the descriptor-based helpers to sshKeyStore.
+type unixSSHKeyStore struct{ dir int }
+
+func (s *unixSSHKeyStore) read(name string) (sshKeySnapshot, error) {
+	return sshKeyRead(s.dir, name)
+}
+func (s *unixSSHKeyStore) write(name string, data []byte, expected sshKeySnapshot) error {
+	return sshKeyWrite(s.dir, name, data, expected)
+}
+func (s *unixSSHKeyStore) close() {
+	if s.dir >= 0 {
+		unix.Close(s.dir)
+		s.dir = -1
 	}
-	if operation != "list" && !sshKeyID.MatchString(request.ID) {
-		return nil, errors.New("keys_invalid_id")
-	}
-	fingerprint := ""
-	if operation == "install" {
-		var err error
-		fingerprint, err = validateP256PublicKey(request.PublicKey)
-		if err != nil {
-			return nil, err
-		}
-	}
-	dir, err := sshKeyDirectory(home, operation == "install")
-	if errors.Is(err, os.ErrNotExist) && operation == "list" {
-		return map[string]any{"schema": 1, "keys": []sshKeyRecord{}}, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	defer unix.Close(dir)
-	if operation == "list" {
-		meta, err := sshKeyRead(dir, ".shinphony-keys.json")
-		if err != nil {
-			return nil, err
-		}
-		journal := sshKeyJournal{Schema: 1, Keys: map[string]sshKeyRecord{}}
-		if meta.stat != nil && (json.Unmarshal(meta.data, &journal) != nil || journal.Schema != 1 || journal.Keys == nil) {
-			return nil, errors.New("keys_journal_invalid")
-		}
-		records := []sshKeyRecord{}
-		for _, record := range journal.Keys {
-			records = append(records, record)
-		}
-		sort.Slice(records, func(i, j int) bool { return records[i].ID < records[j].ID })
-		return map[string]any{"schema": 1, "keys": records}, nil
-	}
-	lock, err := unix.Openat(dir, ".shinphony-keys.lock", unix.O_RDWR|unix.O_CREAT|unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_CLOEXEC, 0600)
+}
+func (s *unixSSHKeyStore) lock() (func(), error) {
+	lock, err := unix.Openat(s.dir, ".shinphony-keys.lock", unix.O_RDWR|unix.O_CREAT|unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_CLOEXEC, 0600)
 	if err != nil {
 		return nil, errors.New("keys_lock_failed")
 	}
@@ -274,130 +158,14 @@ func manageSSHKey(home, operation string, request sshKeyRequest) (any, error) {
 	if unix.Flock(lock, unix.LOCK_EX|unix.LOCK_NB) != nil {
 		return nil, errors.New("keys_busy")
 	}
-	defer unix.Flock(lock, unix.LOCK_UN)
-	meta, err := sshKeyRead(dir, ".shinphony-keys.json")
-	if err != nil {
-		return nil, err
-	}
-	journal := sshKeyJournal{Schema: 1, Keys: map[string]sshKeyRecord{}}
-	if meta.stat != nil {
-		if json.Unmarshal(meta.data, &journal) != nil || journal.Schema != 1 || journal.Keys == nil {
-			return nil, errors.New("keys_journal_invalid")
-		}
-	}
-	keys, err := sshKeyRead(dir, "authorized_keys")
-	if err != nil {
-		return nil, err
-	}
-	record, known := journal.Keys[request.ID]
-	if known && (record.ID != request.ID || record.PublicKey == "" || (operation == "install" && record.PublicKey != request.PublicKey)) {
-		return nil, errors.New("keys_record_mismatch")
-	}
-	if operation == "revoke" && !known {
-		return nil, errors.New("keys_not_managed")
-	}
-	if !known {
-		record = sshKeyRecord{ID: request.ID, PublicKey: request.PublicKey, Fingerprint: fingerprint}
-	}
-	expected := record.PublicKey + " shinphony:" + request.ID
-	ownedCount, otherCount := 0, 0
-	lines := bytes.SplitAfter(keys.data, []byte("\n"))
-	for _, line := range lines {
-		value := strings.TrimSuffix(strings.TrimSuffix(string(line), "\n"), "\r")
-		if value == expected {
-			ownedCount++
-			continue
-		}
-		fields := strings.Fields(value)
-		for i := 0; i+1 < len(fields); i++ {
-			if fields[i]+" "+fields[i+1] == record.PublicKey {
-				otherCount++
-				break
-			}
-		}
-	}
-	if otherCount > 0 || ownedCount > 1 || (!known && ownedCount > 0) {
-		return nil, errors.New("keys_already_authorized_elsewhere")
-	}
-	writeJournal := func() error {
-		journal.Keys[request.ID] = record
-		data, err := json.Marshal(journal)
-		if err != nil {
-			return err
-		}
-		if err = sshKeyWrite(dir, ".shinphony-keys.json", data, meta); err != nil {
-			return err
-		}
-		meta, err = sshKeyRead(dir, ".shinphony-keys.json")
-		return err
-	}
-	if operation == "install" {
-		if record.State == "installed" && ownedCount == 0 {
-			return nil, errors.New("keys_managed_line_changed")
-		}
-		record.State = "installing"
-		if err = writeJournal(); err != nil {
-			return nil, err
-		}
-		if ownedCount == 0 {
-			data := append([]byte{}, keys.data...)
-			if len(data) > 0 && data[len(data)-1] != '\n' {
-				data = append(data, '\n')
-			}
-			data = append(data, []byte(expected+"\n")...)
-			if err = sshKeyWrite(dir, "authorized_keys", data, keys); err != nil {
-				return nil, err
-			}
-		}
-		record.State = "installed"
-	} else {
-		if record.State == "installed" && ownedCount == 0 {
-			return nil, errors.New("keys_managed_line_changed")
-		}
-		record.State = "revoking"
-		if err = writeJournal(); err != nil {
-			return nil, err
-		}
-		if ownedCount == 1 {
-			data := []byte{}
-			for _, line := range lines {
-				if strings.TrimSuffix(strings.TrimSuffix(string(line), "\n"), "\r") != expected {
-					data = append(data, line...)
-				}
-			}
-			if err = sshKeyWrite(dir, "authorized_keys", data, keys); err != nil {
-				return nil, err
-			}
-		}
-		record.State = "revoked"
-	}
-	if err = writeJournal(); err != nil {
-		return nil, err
-	}
-	return map[string]any{"schema": 1, "id": request.ID, "state": record.State, "fingerprint": record.Fingerprint}, nil
+	// The file stays open for the whole critical section; closing releases it.
+	return func() { unix.Close(lock) }, nil
 }
 
-func previewSSHKey(home string, request sshKeyRequest) (any, error) {
-	if !sshKeyID.MatchString(request.ID) {
-		return nil, errors.New("keys_invalid_id")
-	}
-	fingerprint, err := validateP256PublicKey(request.PublicKey)
+func openSSHKeyStore(home string, create bool) (sshKeyStore, error) {
+	dir, err := sshKeyDirectory(home, create)
 	if err != nil {
 		return nil, err
 	}
-	dir, err := sshKeyDirectory(home, false)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return nil, err
-	}
-	if dir >= 0 {
-		defer unix.Close(dir)
-		if _, err := sshKeyRead(dir, "authorized_keys"); err != nil {
-			return nil, err
-		}
-		if _, err := sshKeyRead(dir, ".shinphony-keys.json"); err != nil {
-			return nil, err
-		}
-	}
-	return map[string]any{"schema": 1, "id": request.ID, "fingerprint": fingerprint,
-		"addition": request.PublicKey + " shinphony:" + request.ID}, nil
+	return &unixSSHKeyStore{dir: dir}, nil
 }

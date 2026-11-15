@@ -31,7 +31,7 @@ func (s store) doctor(profile, lane, host string) (map[string]any, error) {
 			result["needsRecovery"] = true
 		}
 	}
-	for _, agent := range []string{"codex", "codex-hooks", "claude", "dsh"} {
+	for _, agent := range []string{"codex", "codex-hooks", "claude", "dsh", "agy"} {
 		state := "not_installed"
 		rec, e := s.installRecord(agent)
 		if e == nil {

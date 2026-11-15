@@ -376,6 +376,20 @@ func TestAgentEventsEndpoint(t *testing.T) {
 	if f := next(); f["status"] != "attention" || f["category"] != "approval_required" {
 		t.Fatal(f)
 	}
+	// Antigravity uses the same endpoint, queue and delivery path, with its own
+	// agent label and a session key derived from the conversation id.
+	agy := sessionKey("agy", "conversation-1")
+	post(agentEvent{Agent: "agy", Kind: "invocation", Session: agy, Body: "fix the tests", Project: "hook", Mux: "tmux"})
+	if f := next(); f["category"] != "task_started" || f["agent"] != "agy" || f["session"] != agy ||
+		f["body"] != "fix the tests" || f["visibility"] != "silent" {
+		t.Fatal(f)
+	}
+	if out := post(agentEvent{Agent: "agy", Kind: "stop", Session: agy, Mux: "tmux"}); out["queued"] != true {
+		t.Fatal(out)
+	}
+	if f := next(); f["category"] != "task_complete" || f["agent"] != "agy" || f["status"] != "completed" || f["body"] != "fix the tests" {
+		t.Fatal(f)
+	}
 	resp, err := client.Post("http://local/v1/agent-events", "application/json", strings.NewReader(`{"agent":"claude","kind":"stop","session":"`+s+`","transcript":"leak"}`))
 	if err != nil {
 		t.Fatal(err)
@@ -383,6 +397,16 @@ func TestAgentEventsEndpoint(t *testing.T) {
 	resp.Body.Close()
 	if resp.StatusCode != 400 {
 		t.Fatal("unknown field accepted")
+	}
+	// agy has no verified terminal context route, so a Source is refused.
+	resp, err = client.Post("http://local/v1/agent-events", "application/json",
+		strings.NewReader(`{"agent":"agy","kind":"stop","session":"`+agy+`","source":{"agent":"agy","thread":"c","parentPid":2}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != 400 {
+		t.Fatal("agy source accepted")
 	}
 }
 

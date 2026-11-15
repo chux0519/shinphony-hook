@@ -16,7 +16,8 @@
   "main": "src/entry.mjs",
   "compatibility_date": "2026-08-27",
   "workers_dev": false,
-  "routes": [{ "pattern": "shinphony.app", "custom_domain": true }],
+  // shinphony.app now belongs to shinphony-web, which forwards /pair, /pair.sh and /hook here by service binding.
+  "routes": [],
   "rules": [{ "type": "Text", "globs": ["**/*.tmpl"] }],
   // SOURCE_URL is shown on /hook as the public source link. Leave it unset
   // until the public repository exists; /hook hides the link while it is empty.

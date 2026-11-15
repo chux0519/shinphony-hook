@@ -1,0 +1,132 @@
+# Shinphony: turn on Windows' OpenSSH Server, then show its status.
+# Served by https://shinphony.app/ssh.ps1. The sha256 values below were taken
+# from Shinphony's signed release metadata and verified before this script was
+# sent, so the downloaded helper is checked against exactly what that release
+# signed.
+# Release: @@SEQUENCE@@
+#
+# Safe to run any number of times: when OpenSSH Server is already on and the
+# firewall rule is enabled it asks nothing and changes nothing.
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+
+# The advertised command is `irm ... | iex`, so this runs inside the user's own
+# window: it must never call `exit`, which would close that window. Stop-Setup
+# throws a marked message that the top-level catch prints, and the whole body
+# lives in one script block so a `return` leaves only this setup.
+function Stop-Setup($message) { throw ('shinphony_setup_stopped: ' + $message) }
+
+try {
+& {
+$windowsAmd64 = '@@WINDOWS_AMD64@@'
+$windowsArm64 = '@@WINDOWS_ARM64@@'
+$downloads = '@@DOWNLOAD_BASE@@'
+
+# The platform decides which verified hash and download this run may use.
+$platform = switch ($env:PROCESSOR_ARCHITECTURE) {
+  'AMD64' { 'windows-amd64' }
+  'ARM64' { 'windows-arm64' }
+  default { Stop-Setup 'Shinphony setup supports Windows on x64 and arm64.' }
+}
+$expected = if ($platform -eq 'windows-amd64') { $windowsAmd64 } else { $windowsArm64 }
+if ($expected -notmatch '^[0-9a-f]{64}$') {
+  Stop-Setup 'This installer is not from a verified release. Get a new one from https://shinphony.app/ssh.ps1'
+}
+
+$dest = Join-Path $env:USERPROFILE '.shinphony-agent'
+$binary = Join-Path $dest ("shinphony-hook-$expected.exe")
+
+# The helper belongs to the user who runs this: a private directory, never a
+# link, and an existing file is reused only when its hash matches exactly.
+if (-not (Test-Path -LiteralPath $dest)) { New-Item -ItemType Directory -Path $dest | Out-Null }
+if ((Get-Item -LiteralPath $dest -Force).Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+  Stop-Setup 'Refusing to use a linked .shinphony-agent.'
+}
+$me = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+$acl = New-Object System.Security.AccessControl.DirectorySecurity
+$acl.SetAccessRuleProtection($true, $false)
+$acl.SetOwner($me)
+$acl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new($me, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow'))
+Set-Acl -LiteralPath $dest -AclObject $acl
+
+if (Test-Path -LiteralPath $binary) {
+  if ((Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash.ToLower() -ne $expected) {
+    Stop-Setup 'The installed helper is not this verified release. Move it away and run this again.'
+  }
+  Write-Host "Shinphony: reusing the installed helper ($platform)."
+} else {
+  Write-Host "Shinphony: installing helper ($platform)..."
+  $work = Join-Path ([System.IO.Path]::GetTempPath()) ('shinphony-ssh-' + [System.Guid]::NewGuid().ToString('N'))
+  New-Item -ItemType Directory -Path $work | Out-Null
+  try {
+    $file = Join-Path $work 'helper.exe'
+    Invoke-WebRequest -UseBasicParsing -Uri "$downloads/agent/targets/agent/$expected.$platform" -OutFile $file
+    if ((Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLower() -ne $expected) {
+      Stop-Setup 'The downloaded helper does not match the verified release. Nothing installed.'
+    }
+    # Move refuses an existing path, so nothing is ever overwritten.
+    [System.IO.File]::Move($file, $binary)
+  } finally {
+    Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
+  }
+}
+
+function Get-SSHDStatus {
+  $raw = & $binary windows-sshd status
+  if ($LASTEXITCODE -ne 0 -or -not $raw) {
+    Stop-Setup 'Could not check OpenSSH Server. Run this again from a normal PowerShell window.'
+  }
+  return (($raw -join "`n") | ConvertFrom-Json)
+}
+
+# One readable line from the helper's status JSON.
+function Format-SSHDStatus($status) {
+  $state = if ($status.running) { 'on' } else { 'off' }
+  $start = if ($status.startType) { $status.startType } else { 'not installed' }
+  $firewall = if (-not $status.firewall.exists) {
+    'missing'
+  } elseif ($status.firewall.enabled) {
+    [string]$status.firewall.profile
+  } else {
+    ([string]$status.firewall.profile) + ', disabled'
+  }
+  return "OpenSSH Server is $state ($start). Firewall: $firewall."
+}
+
+$status = Get-SSHDStatus
+$needsAdmin = (-not $status.running) -or (-not $status.firewall.exists) -or (-not $status.firewall.enabled)
+if ($needsAdmin) {
+  Write-Host 'Shinphony needs administrator permission to turn on OpenSSH Server.'
+  $answer = Read-Host 'Continue? [Y/n]'
+  if ($answer -eq '' -or $answer -match '^(?i)y(es)?$') {
+    # One UAC prompt, and no file is written: the elevated window receives the
+    # fixed command as -EncodedCommand (UTF-16LE base64) and stays open when the
+    # enable step fails, so its sentence can be read.
+    $quoted = $binary -replace "'", "''"
+    $command = "& '$quoted' windows-sshd enable; if (`$LASTEXITCODE -ne 0) { Read-Host 'Press Enter to close this window.' }"
+    $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command))
+    try {
+      $process = Start-Process -FilePath 'powershell.exe' -Verb RunAs -PassThru -Wait `
+        -ArgumentList @('-NoProfile', '-EncodedCommand', $encoded)
+      if ($process.ExitCode -ne 0) {
+        Write-Host 'OpenSSH Server could not be turned on.' -ForegroundColor Red
+      }
+    } catch {
+      Stop-Setup 'Administrator permission was not given, so nothing changed.'
+    }
+    $status = Get-SSHDStatus
+  } else {
+    Write-Host 'Nothing changed.'
+    return
+  }
+}
+Write-Host (Format-SSHDStatus $status)
+}
+} catch {
+  $text = "$($_.Exception.Message)"
+  if ($text.StartsWith('shinphony_setup_stopped: ')) {
+    Write-Host $text.Substring(25) -ForegroundColor Red
+  } else {
+    Write-Host $text -ForegroundColor Red
+  }
+}

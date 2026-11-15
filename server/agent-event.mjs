@@ -3,7 +3,7 @@
 // body, plus project/agent/session labels. Never paths, commands or PIDs.
 export const categories = ['approval_required', 'question', 'task_complete', 'error',
   'session_started', 'session_ended', 'task_started', 'tool_running', 'tool_finished'];
-export const agents = { codex: 'Codex', claude: 'Claude Code', dsh: 'DSH' };
+export const agents = { codex: 'Codex', claude: 'Claude Code', dsh: 'DSH', agy: 'Antigravity' };
 export const detailFields = ['category', 'agent', 'session', 'title', 'body', 'project', 'visibility'];
 
 const unsafe = /[\u0000-\u0008\u000b-\u001f\u007f-\u009f‪-‮⁦-⁩]/u;

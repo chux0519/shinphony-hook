@@ -25,7 +25,7 @@ case "$os:$arch" in
   Darwin:x86_64) platform=darwin-amd64; label='macOS x86_64'; expected=$darwin_amd64 ;;
   Linux:aarch64|Linux:arm64) platform=linux-arm64; label='Linux arm64'; expected=$linux_arm64 ;;
   Linux:x86_64) platform=linux-amd64; label='Linux x86_64'; expected=$linux_amd64 ;;
-  *) fail 'Shinphony setup supports macOS and Linux. On Windows use Shinphony -> Add server -> Get installation command.' ;;
+  *) fail 'Shinphony setup supports macOS and Linux. On Windows, run this in PowerShell: irm https://shinphony.app/pair.ps1 | iex' ;;
 esac
 case "$expected" in ''|*[!a-f0-9]*) fail 'This installer is not from a verified release. Get a new one from https://shinphony.app/pair' 3 ;; esac
 [ "${#expected}" = 64 ] || fail 'This installer is not from a verified release. Get a new one from https://shinphony.app/pair' 3

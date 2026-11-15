@@ -35,15 +35,30 @@ type agentEvent struct {
 	Title   string      `json:"title,omitempty"`
 	Body    string      `json:"body,omitempty"`
 	Project string      `json:"project,omitempty"`
+	// Antigravity's documented per-event identities. Nil means the payload did
+	// not carry the field, which is different from zero: only a strictly newer
+	// counter may start or reopen work.
+	Invocation *int `json:"invocation,omitempty"`
+	Steps      *int `json:"steps,omitempty"`
+	Step       *int `json:"step,omitempty"`
+	Execution  *int `json:"execution,omitempty"`
 }
 
-var agentEventKinds = map[string]bool{"session_start": true, "prompt": true, "stop": true, "approval": true, "question": true, "session_end": true}
+var agentEventKinds = map[string]bool{"session_start": true, "prompt": true, "stop": true, "approval": true, "question": true, "session_end": true,
+	// Antigravity reports a model call, a finished question tool, continuing
+	// background work and a failed stop separately from a user turn.
+	"invocation": true, "resume": true, "background": true, "failure": true}
 
 func (e agentEvent) valid() bool {
 	if e.Source != nil && (e.Agent != "codex" || e.Source.Agent != e.Agent || !identifier.MatchString(e.Source.Thread) || e.Session != sessionKey(e.Agent, e.Source.Thread) || e.Source.ParentPID <= 1) {
 		return false
 	}
-	return (e.Agent == "claude" || e.Agent == "dsh" || e.Agent == "codex") && agentEventKinds[e.Kind] &&
+	for _, counter := range []*int{e.Invocation, e.Steps, e.Step, e.Execution} {
+		if counter != nil && (*counter < 0 || *counter > 1_000_000_000) {
+			return false
+		}
+	}
+	return (e.Agent == "claude" || e.Agent == "dsh" || e.Agent == "codex" || e.Agent == "agy") && agentEventKinds[e.Kind] &&
 		identifier.MatchString(e.Session) && (e.Mux == "" || e.Mux == "hc" || e.Mux == "tmux" || e.Mux == "zellij" || e.Mux == "herdr" || e.Mux == "screen") &&
 		excerpt(e.Title, 80, false) == e.Title && excerpt(e.Body, 200, true) == e.Body && excerpt(e.Project, 64, false) == e.Project
 }
@@ -278,6 +293,83 @@ func agentEventFromHook(agent string, h notifier.HookInfo, getenv func(string) s
 	return e, true
 }
 
+// agentEventFromAgy maps an Antigravity payload to the same event vocabulary.
+// Only what the payload proves is declared: a model call is not a user turn, a
+// finished question tool is not a new prompt, and Stop is a completion only
+// when fullyIdle is true and the termination reason is the normal one.
+func agentEventFromAgy(h notifier.AgyHook, getenv func(string) string) (agentEvent, bool) {
+	e := agentEvent{Agent: "agy", Session: sessionKey("agy", h.Session), Mux: multiplexer(getenv), Project: excerpt(filepath.Base(h.Cwd), 64, false)}
+	if e.Project == "." || e.Project == string(filepath.Separator) {
+		e.Project = ""
+	}
+	// Every event carries whatever documented identity it has; the tracker
+	// decides with it, never with prompt text or timing alone.
+	e.Invocation, e.Steps, e.Step, e.Execution = h.Invocation, h.Steps, h.Step, h.Execution
+	switch h.Event {
+	case "SessionStart":
+		e.Kind = "session_start"
+	case "PreInvocation":
+		// The explicit request may sit beyond the excerpt: decide on the whole
+		// original prompt, then bound only what travels.
+		e.Kind, e.Armed, e.Body = "invocation", wantsNotify(h.Prompt), excerpt(h.Prompt, 200, true)
+	case "PreToolUse":
+		switch h.Tool {
+		case "ask_question":
+			e.Kind = "question"
+			if len(h.Questions) > 0 {
+				e.Title, e.Body = excerpt(h.Questions[0].Text, 80, false), excerpt(questionOptions(h.Questions), 200, true)
+				if len(h.Questions) > 1 {
+					e.Title = fmt.Sprintf("%d questions", len(h.Questions))
+				}
+			} else {
+				e.Title = "Antigravity needs an answer"
+			}
+		case "ask_permission":
+			e.Kind = "approval"
+			what := strings.TrimSpace(strings.TrimSpace(h.Action) + " " + strings.TrimSpace(h.Target))
+			if what == "" {
+				e.Title = "Allow permission?"
+			} else {
+				e.Title = excerpt("Allow "+what+"?", 80, false)
+			}
+			e.Body = excerpt(h.Reason, 200, true)
+		default:
+			// An ordinary tool call proves nothing about waiting for the user.
+			return e, false
+		}
+	case "PostToolUse":
+		// The user answered the question or the permission request: the same
+		// turn continues.
+		if h.Tool != "ask_question" && h.Tool != "ask_permission" {
+			return e, false
+		}
+		e.Kind = "resume"
+	case "Stop":
+		if !h.HasFullyIdle || !h.FullyIdle {
+			// Background work is still running (or the field is missing): the
+			// task is not complete, whatever the termination reason says.
+			e.Kind = "background"
+			return e, true
+		}
+		switch h.Termination {
+		case "model_stop":
+			e.Kind = "stop"
+		case "error", "max_steps_exceeded":
+			// Deliberately no raw error text: it can name paths or commands.
+			e.Kind, e.Title = "failure", "Antigravity stopped with an error"
+			if h.Termination == "max_steps_exceeded" {
+				e.Title = "Antigravity reached the step limit"
+			}
+		default:
+			// An unrecognised reason is not evidence of success.
+			return e, false
+		}
+	default:
+		return e, false
+	}
+	return e, true
+}
+
 func postAgentEvent(ctx context.Context, dir string, e agentEvent) error {
 	body, _ := json.Marshal(e)
 	tr := &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) { return dialLocal(ctx, dir) }}
@@ -300,6 +392,27 @@ type sessionState struct {
 	armed  bool
 	prompt string
 	seen   time.Time
+	// Antigravity: an execution is running until a Stop says it is fully idle,
+	// and a finished execution must not be completed twice by a duplicate or
+	// late Stop. Other agents never read these fields. All of them are scalars,
+	// so dedup state per session stays bounded.
+	running bool
+	stopped bool
+	started bool
+	// heard marks any earlier event for this session, so a SessionStart that
+	// arrives after other events is treated as late, not as the session start.
+	heard bool
+	// Documented counters, monotonic per conversation: a replay cannot move them
+	// backwards, and a stale event cannot complete or reopen newer work.
+	lastInvocation, lastSteps int
+	hasInvocation, hasSteps    bool
+	lastStep                   int
+	hasStep                    bool
+	lastExecution              int
+	hasExecution               bool
+	// The last tool step whose answer-sheet was already announced.
+	resumeStep    int
+	hasResume     bool
 	// The question the agent asked and the user has not answered yet.
 	question, options string
 }
@@ -345,8 +458,19 @@ func (t *tracker) decide(e agentEvent, s settings, now time.Time) decision {
 		t.sessions[key] = st
 	}
 	st.seen = now
+	firstSighting := !st.heard
+	st.heard = true
 	d := &eventDetails{Agent: e.Agent, Session: e.Session, Project: e.Project, Visibility: "silent"}
 	status, id := "completed", ""
+	// A reported execution is final: a replayed or late Stop/failure for it must
+	// not complete a newer turn. Background stops are not gated, so a later stop
+	// for the same attempt can still finish the task.
+	if e.Agent == "agy" && (e.Kind == "stop" || e.Kind == "failure") && e.Execution != nil {
+		if st.hasExecution && *e.Execution <= st.lastExecution {
+			return decision{Reason: "stale_execution"}
+		}
+		st.lastExecution, st.hasExecution = *e.Execution, true
+	}
 	switch e.Kind {
 	case "prompt":
 		// Any new prompt, including the agent's recorded answer, closes the question.
@@ -355,11 +479,150 @@ func (t *tracker) decide(e agentEvent, s settings, now time.Time) decision {
 		d.Category, d.Title, d.Body = "task_started", e.Title, e.Body
 		id = eventID(key, "prompt", strconv.FormatInt(now.UnixNano(), 10))
 	case "session_start":
-		d.Category, id = "session_started", eventID(key, "start", strconv.FormatInt(now.UnixNano(), 10))
+		if e.Agent == "agy" {
+			// SessionStart fires once, before the first invocation. A repeat, or a
+			// first SessionStart that arrives after other events, is late: it must
+			// not reopen a finished turn or reset its counters.
+			if st.started {
+				return decision{Reason: "duplicate_session_start"}
+			}
+			if !firstSighting {
+				st.started = true
+				return decision{Reason: "late_session_start"}
+			}
+			st.started = true
+		}
+		// Antigravity's SessionStart identity is the conversation itself, so a
+		// replay after a daemon restart keeps the same durable queue/relay ID.
+		// Other agents keep their timestamped ID.
+		if e.Agent == "agy" {
+			id = eventID(key, "session_start")
+		} else {
+			id = eventID(key, "start", strconv.FormatInt(now.UnixNano(), 10))
+		}
+		d.Category = "session_started"
+	case "invocation":
+		// A model call inside an execution is not a new user turn. The first one
+		// starts the turn; later ones (and duplicate deliveries) must not reset
+		// its start time or an explicit "notify me" request.
+		if e.Agent == "agy" {
+			// A turn is newer only when a documented counter advanced. Counters
+			// are high-watermarks: a replay that regresses any provided counter is
+			// out of order, and a payload with no counters can only start the first
+			// turn this daemon sees. An identical prompt is never evidence.
+			if e.Invocation == nil && e.Steps == nil {
+				if !firstSighting {
+					return decision{Reason: "stale_invocation"}
+				}
+			} else {
+				if e.Invocation != nil && st.hasInvocation && *e.Invocation < st.lastInvocation {
+					return decision{Reason: "stale_invocation"}
+				}
+				if e.Steps != nil && st.hasSteps && *e.Steps < st.lastSteps {
+					return decision{Reason: "stale_invocation"}
+				}
+				newer := (e.Invocation != nil && (!st.hasInvocation || *e.Invocation > st.lastInvocation)) ||
+					(e.Steps != nil && (!st.hasSteps || *e.Steps > st.lastSteps))
+				if !newer {
+					return decision{Reason: "stale_invocation"}
+				}
+				// Keep both high-watermarks monotonic, so a crossed pair (higher
+				// invocation, lower steps) cannot later admit an old replay.
+				if e.Invocation != nil && (!st.hasInvocation || *e.Invocation > st.lastInvocation) {
+					st.lastInvocation, st.hasInvocation = *e.Invocation, true
+				}
+				if e.Steps != nil && (!st.hasSteps || *e.Steps > st.lastSteps) {
+					st.lastSteps, st.hasSteps = *e.Steps, true
+				}
+			}
+		}
+		if st.running {
+			return decision{Reason: "already_running"}
+		}
+		st.running, st.stopped = true, false
+		st.start, st.armed, st.prompt = now, e.Armed, e.Body
+		st.question, st.options = "", ""
+		d.Category, d.Title, d.Body = "task_started", e.Title, e.Body
+		// Documented counters identify the invocation; the timestamp is only a
+		// fallback for payloads that carry none.
+		if e.Invocation != nil || e.Steps != nil {
+			id = eventID(key, "invocation", agyCounterString(e.Invocation), agyCounterString(e.Steps))
+		} else {
+			id = eventID(key, "start", strconv.FormatInt(now.UnixNano(), 10))
+		}
+	case "resume":
+		// The user answered the question or the permission request: the wait
+		// ends and the same turn keeps running, without restarting its clock.
+		if st.stopped {
+			return decision{Reason: "stale_event"}
+		}
+		if e.Agent == "agy" && e.Step != nil {
+			// PostToolUse repeats the step it followed: a replay for the same step
+			// is the same answer, and an older step is out of order.
+			if st.hasStep && *e.Step < st.lastStep {
+				return decision{Reason: "stale_step"}
+			}
+			if st.hasResume && *e.Step <= st.resumeStep {
+				return decision{Reason: "duplicate_event"}
+			}
+			st.lastStep, st.hasStep = *e.Step, true
+			st.resumeStep, st.hasResume = *e.Step, true
+		}
+		st.question, st.options, st.running = "", "", true
+		d.Category, d.Visibility = "task_started", "silent"
+		if e.Step != nil {
+			id = eventID(key, "resume", agyCounterString(e.Step))
+		} else {
+			id = eventID(key, "resume", strconv.FormatInt(now.UnixNano(), 10))
+		}
+	case "background":
+		// Stop with fullyIdle=false (or the field missing): background work
+		// continues, so this is neither completion nor a new activity state.
+		if st.stopped {
+			return decision{Reason: "already_stopped"}
+		}
+		return decision{Reason: "background_running"}
+	case "failure":
+		if st.stopped {
+			return decision{Reason: "already_stopped"}
+		}
+		start := st.start
+		if start.IsZero() {
+			start = now
+		}
+		st.start, st.armed, st.running, st.stopped = time.Time{}, false, false, true
+		st.question, st.options = "", ""
+		status = "failed"
+		d.Category, d.Title, d.Body, d.Visibility = "error", e.Title, st.prompt, "banner"
+		if e.Execution != nil {
+			id = eventID(key, "failure", agyCounterString(e.Execution))
+		} else {
+			id = eventID(key, "failed", strconv.FormatInt(start.UnixNano(), 10))
+		}
 	case "session_end":
 		delete(t.sessions, key)
 		d.Category, id = "session_ended", eventID(key, "end", strconv.FormatInt(now.UnixNano(), 10))
 	case "approval", "question":
+		if e.Agent == "agy" {
+			if st.stopped {
+				return decision{Reason: "stale_event"}
+			}
+			if e.Step != nil {
+				// The tool step identifies the request (one tool call per step): a
+				// replay at the same step is the same banner, while a later step is
+				// a new request even when the text repeats.
+				if st.hasStep && *e.Step < st.lastStep {
+					return decision{Reason: "stale_step"}
+				}
+				if st.hasStep && *e.Step == st.lastStep {
+					return decision{Reason: "duplicate_event"}
+				}
+				st.lastStep, st.hasStep = *e.Step, true
+			} else if e.Kind == "question" && st.question != "" && st.question == e.Title {
+				// No step identity: fall back to the still-open question only.
+				return decision{Reason: "duplicate_question"}
+			}
+		}
 		// Someone has to answer: always a banner. Show the command when the
 		// hook has one (Codex), else what the user asked for.
 		status, d.Visibility, d.Title, d.Body = "attention", "banner", e.Title, e.Body
@@ -374,10 +637,21 @@ func (t *tracker) decide(e agentEvent, s settings, now time.Time) decision {
 			d.Body = st.prompt
 		}
 		d.Category = map[string]string{"approval": "approval_required", "question": "question"}[e.Kind]
-		id = eventID(key, e.Kind, strconv.FormatInt(now.UnixNano(), 10))
+		if e.Agent == "agy" && e.Step != nil {
+			// Step plus the exact request: distinct requests stay distinct, a
+			// replay after a restart keeps the same ID.
+			id = eventID(key, e.Kind, agyCounterString(e.Step), e.Title, e.Body)
+		} else {
+			id = eventID(key, e.Kind, strconv.FormatInt(now.UnixNano(), 10))
+		}
 	case "stop":
+		if st.stopped && e.Agent == "agy" {
+			// A duplicate or late Stop for an execution already reported.
+			return decision{Reason: "already_stopped"}
+		}
 		start, armed, prompt := st.start, st.armed, st.prompt
 		st.start, st.armed = time.Time{}, false
+		st.running, st.stopped = false, true
 		long := !start.IsZero() && now.Sub(start) >= time.Duration(s.LongTurnSeconds)*time.Second
 		banner := armed || s.TurnCompletePush == "all" || (s.TurnCompletePush == "long" && long)
 		if e.Mux == "" && s.SuppressWithoutMux && !armed {
@@ -390,7 +664,11 @@ func (t *tracker) decide(e agentEvent, s settings, now time.Time) decision {
 			start = now
 		}
 		d.Category, d.Title, d.Body = "task_complete", e.Title, prompt
-		id = eventID(key, "stop", strconv.FormatInt(start.UnixNano(), 10))
+		if e.Agent == "agy" && e.Execution != nil {
+			id = eventID(key, "stop", agyCounterString(e.Execution))
+		} else {
+			id = eventID(key, "stop", strconv.FormatInt(start.UnixNano(), 10))
+		}
 		if st.question != "" {
 			// Codex's async question ends the turn at once: the turn is not done,
 			// it waits for the answer. Stay "needs you" (banner already sent).
@@ -440,6 +718,14 @@ func (t *tracker) evict() {
 		}
 	}
 	delete(t.sessions, oldest)
+}
+
+// agyCounterString renders an optional documented counter for a stable ID.
+func agyCounterString(v *int) string {
+	if v == nil {
+		return ""
+	}
+	return strconv.Itoa(*v)
 }
 
 func eventID(parts ...string) string {

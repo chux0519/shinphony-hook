@@ -1,8 +1,10 @@
 // https://shinphony.app — the router for the one-line setup (/pair) and the
 // release page (/hook).
 //
-// GET /pair  -> bootstrap script with the current verified release hashes
-// GET /hook  -> plain HTML release page (sequence, date, signed hashes, verify)
+// GET /pair    -> bootstrap script with the current verified release hashes
+// GET /ssh.ps1 -> PowerShell script that turns on Windows' OpenSSH Server
+// GET /pair.ps1 -> PowerShell script that installs the helper and pairs
+// GET /hook    -> plain HTML release page (sequence, date, signed hashes, verify)
 // GET /      -> 302 to the Shinphony product page
 // everything else -> 404
 //
@@ -15,6 +17,7 @@
 import { verifyEd25519 } from './ed25519.mjs';
 import { MetadataError, MAX_METADATA_BYTES, RELEASE_PLATFORMS, verifyMetadata } from './tuf.mjs';
 import { renderPairScript, unavailableScript } from './pair-script.mjs';
+import { renderPairPs1, renderSSHPs1, unavailablePairPs1, unavailableSSHPs1 } from './ps1.mjs';
 import { renderHookPage, unavailableHookPage } from './hook-page.mjs';
 
 export const DEFAULT_METADATA_BASE = 'https://downloads.potafree.net/agent/stable/metadata';
@@ -108,6 +111,8 @@ export function createSite(options) {
   const {
     root,
     template,
+    sshTemplate = '',
+    ps1Template = '',
     fetchImpl = (...args) => globalThis.fetch(...args),
     now = () => Date.now(),
     metadataBase = DEFAULT_METADATA_BASE,
@@ -154,6 +159,38 @@ export function createSite(options) {
         const code = error instanceof MetadataError ? error.code : error?.message;
         console.error('pair: refusing to serve unverified hashes:', code);
         const fallback = head ? null : unavailableScript();
+        return text(fallback, 200, { 'x-shinphony-setup': 'unavailable' });
+      }
+      return text(head ? null : body, 200, { 'cache-control': 'no-store' });
+    }
+
+    if (url.pathname === '/ssh.ps1') {
+      if (method !== 'GET' && !head) return text('Not found\n', 404);
+      let body;
+      try {
+        if (typeof sshTemplate !== 'string' || sshTemplate.length === 0) throw new Error('ssh_template_missing');
+        const verified = await cache.get();
+        body = renderSSHPs1(sshTemplate, verified, downloadBase);
+      } catch (error) {
+        const code = error instanceof MetadataError ? error.code : error?.message;
+        console.error('ssh.ps1: refusing to serve unverified hashes:', code);
+        const fallback = head ? null : unavailableSSHPs1();
+        return text(fallback, 200, { 'x-shinphony-setup': 'unavailable' });
+      }
+      return text(head ? null : body, 200, { 'cache-control': 'no-store' });
+    }
+
+    if (url.pathname === '/pair.ps1') {
+      if (method !== 'GET' && !head) return text('Not found\n', 404);
+      let body;
+      try {
+        if (typeof ps1Template !== 'string' || ps1Template.length === 0) throw new Error('ps1_template_missing');
+        const verified = await cache.get();
+        body = renderPairPs1(ps1Template, verified, downloadBase);
+      } catch (error) {
+        const code = error instanceof MetadataError ? error.code : error?.message;
+        console.error('pair.ps1: refusing to serve unverified hashes:', code);
+        const fallback = head ? null : unavailablePairPs1();
         return text(fallback, 200, { 'x-shinphony-setup': 'unavailable' });
       }
       return text(head ? null : body, 200, { 'cache-control': 'no-store' });

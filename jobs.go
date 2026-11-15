@@ -28,7 +28,7 @@ type setupResult struct {
 }
 
 func (j setupRequest) valid() bool {
-	return identifier.MatchString(j.ID) && identifier.MatchString(j.Profile) && identifier.MatchString(j.Host) && (j.Agent == "auto" || j.Agent == "codex" || j.Agent == "claude" || j.Agent == "dsh") && (j.Lane == "sandbox" || j.Lane == "testflight" || j.Lane == "production")
+	return identifier.MatchString(j.ID) && identifier.MatchString(j.Profile) && identifier.MatchString(j.Host) && (j.Agent == "auto" || j.Agent == "codex" || j.Agent == "claude" || j.Agent == "dsh" || j.Agent == "agy") && (j.Lane == "sandbox" || j.Lane == "testflight" || j.Lane == "production")
 }
 func (q *queue) initJobs() error {
 	// Do not silently replay a possibly applied config transaction after a crash.

@@ -8,10 +8,14 @@ import { createSite, createHashCache, DEFAULT_DOWNLOAD_BASE, DEFAULT_METADATA_BA
 import { PINNED_ROOT } from '../src/pinned-root.mjs';
 
 const TEMPLATE = readFileSync(new URL('../pair.sh.tmpl', import.meta.url), 'utf8');
+const SSH_TEMPLATE = readFileSync(new URL('../ssh.ps1.tmpl', import.meta.url), 'utf8');
+const PS1_TEMPLATE = readFileSync(new URL('../pair.ps1.tmpl', import.meta.url), 'utf8');
 const FIXTURES = new URL('./fixtures/release-2026111201/', import.meta.url);
 const fixture = (name) => new Uint8Array(readFileSync(new URL(name, FIXTURES)));
 const RELEASED = Date.UTC(2026, 10, 12, 7, 0, 0);
 const LINUX_ARM64 = '7efa42eae8d70cdfa00d8f2d4d4a9c5f2f176dbc239de3135ad550c0ad44cfb9';
+const WINDOWS_AMD64 = 'b290c60d392c9d47a061310e9231da76c874405cde5198af9551f22172a1d47e';
+const WINDOWS_ARM64 = 'f38f91988cbac25ade13ef9c8502104ac956c370ed5ceb508b2169dbdaf9346a';
 
 // A fake upstream that serves the published metadata set, with per-role
 // overrides so failures can be injected.
@@ -40,6 +44,8 @@ function site(overrides = {}) {
   const handled = createSite({
     root: PINNED_ROOT,
     template: TEMPLATE,
+    sshTemplate: SSH_TEMPLATE,
+    ps1Template: PS1_TEMPLATE,
     fetchImpl,
     now: overrides.now ?? (() => RELEASED),
     ...overrides.site,
@@ -87,6 +93,64 @@ const refused = async (res) => {
   shellSyntaxOk(body);
   return body;
 };
+
+test('/ssh.ps1 serves the filled PowerShell script with verified Windows hashes', async () => {
+  const { fetch } = site();
+  const res = await fetch(request('/ssh.ps1'));
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('cache-control'), 'no-store');
+  assert.equal(res.headers.get('x-shinphony-setup'), null);
+  const body = await res.text();
+  assert.ok(body.includes(WINDOWS_AMD64));
+  assert.ok(body.includes(WINDOWS_ARM64));
+  assert.ok(body.includes('2026111201'));
+  assert.equal(body.includes('@@'), false);
+  assert.ok(body.includes('windows-sshd enable'));
+});
+
+test('/ssh.ps1 serves an echo-only refusal when signatures break', async () => {
+  const tampered = JSON.parse(new TextDecoder().decode(fixture('targets.json')));
+  tampered.signatures[0].sig = tampered.signatures[0].sig.replace(/^./, (c) => (c === '0' ? '1' : '0'));
+  const { fetch } = site({ upstream: { files: { targets: new Uint8Array(Buffer.from(JSON.stringify(tampered))) } } });
+  const res = await fetch(request('/ssh.ps1'));
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('x-shinphony-setup'), 'unavailable');
+  const body = await res.text();
+  assert.ok(body.includes('temporarily unavailable'));
+  assert.ok(!body.includes(WINDOWS_AMD64));
+  assert.ok(!body.includes('Invoke-WebRequest'));
+});
+
+test('/ssh.ps1 refuses to render without a template', async () => {
+  const res = await createSite({ root: PINNED_ROOT, template: TEMPLATE, fetchImpl: upstream().fetchImpl, now: () => RELEASED })(request('/ssh.ps1'));
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('x-shinphony-setup'), 'unavailable');
+});
+
+test('/pair.ps1 serves the filled pairing script with verified Windows hashes', async () => {
+  const { fetch } = site();
+  const res = await fetch(request('/pair.ps1'));
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('cache-control'), 'no-store');
+  assert.equal(res.headers.get('x-shinphony-setup'), null);
+  const body = await res.text();
+  assert.ok(body.includes(WINDOWS_AMD64));
+  assert.ok(body.includes(WINDOWS_ARM64));
+  assert.equal(body.includes('@@'), false);
+  assert.ok(body.includes('& $binary pair'));
+});
+
+test('/pair.ps1 serves an echo-only refusal when signatures break', async () => {
+  const tampered = JSON.parse(new TextDecoder().decode(fixture('targets.json')));
+  tampered.signatures[0].sig = tampered.signatures[0].sig.replace(/^./, (c) => (c === '0' ? '1' : '0'));
+  const { fetch } = site({ upstream: { files: { targets: new Uint8Array(Buffer.from(JSON.stringify(tampered))) } } });
+  const res = await fetch(request('/pair.ps1'));
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('x-shinphony-setup'), 'unavailable');
+  const body = await res.text();
+  assert.ok(body.includes('temporarily unavailable'));
+  assert.ok(!body.includes(WINDOWS_AMD64));
+});
 
 test('/pair serves an echo-only refusal when signatures break', async () => {
   const tampered = JSON.parse(new TextDecoder().decode(fixture('targets.json')));

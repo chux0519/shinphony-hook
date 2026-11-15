@@ -23,6 +23,13 @@ type installRecord struct {
 	After            string `json:"after"`
 	PreviousAfter    string `json:"previousAfter,omitempty"`
 	ComputerUseOuter bool   `json:"computerUseOuter,omitempty"`
+	// Executable is the command the handler was written with. Ownership of an
+	// Antigravity handler needs this exact evidence, never a name suffix.
+	// PreviousExecutable is the generation replaced by an upgrade whose config
+	// swap may not have happened yet; it is bounded to one generation and lets
+	// an interrupted upgrade still be recovered after the user edits the file.
+	Executable         string `json:"executable,omitempty"`
+	PreviousExecutable string `json:"previousExecutable,omitempty"`
 }
 
 func digest(b []byte) string { h := sha256.Sum256(b); return hex.EncodeToString(h[:]) }
@@ -92,7 +99,7 @@ func (s store) installRecord(agent string) (installRecord, error) {
 	if e != nil {
 		return rec, e
 	}
-	if json.Unmarshal(b, &rec) != nil || (rec.Schema != 1 && rec.Schema != 2) || !filepath.IsAbs(rec.Path) || len(rec.Before) > 1048576 {
+	if json.Unmarshal(b, &rec) != nil || (rec.Schema != 1 && rec.Schema != 2 && rec.Schema != 3) || !filepath.IsAbs(rec.Path) || len(rec.Before) > 1048576 {
 		return rec, errConfig
 	}
 	return rec, nil
@@ -192,7 +199,7 @@ func (s store) configureAgentWith(agent, path, exe string, apply bool, propose f
 		if agent == "codex" && rec.ComputerUseOuter {
 			propose = proposedComputerUseOuter
 		}
-		if digest(before) == rec.After || (rec.Schema == 2 && rec.PreviousAfter != "" && digest(before) == rec.PreviousAfter) {
+		if digest(before) == rec.After || (rec.Schema >= 2 && rec.PreviousAfter != "" && digest(before) == rec.PreviousAfter) {
 			desired, err := propose(rec.Before, exe)
 			if err != nil {
 				return err
@@ -211,9 +218,16 @@ func (s store) configureAgentWith(agent, path, exe string, apply bool, propose f
 				if err != nil {
 					return err
 				}
-				rec.Schema = 2
 				rec.PreviousAfter = rec.After
 				rec.After = digest(desired)
+				if rec.Schema < 2 {
+					rec.Schema = 2
+				}
+				if agent == "agy" {
+					// Keep the replaced generation so an interrupted swap can
+					// still prove ownership of the handlers still on disk.
+					rec.PreviousExecutable, rec.Schema, rec.Executable = rec.Executable, 3, exe
+				}
 				updated, _ := json.Marshal(rec)
 				if err = replaceConfig(s.recordPath(agent), oldRecord, true, updated); err != nil {
 					return err
@@ -262,6 +276,11 @@ func (s store) configureAgentWith(agent, path, exe string, apply bool, propose f
 	}
 	if re != nil {
 		rec = installRecord{Schema: 1, Path: path, Before: before, Existed: existed, After: digest(after)}
+		if agent == "agy" {
+			// Antigravity ownership is the exact written command, so the journal
+			// records the executable it was written for.
+			rec.Schema, rec.Executable = 3, exe
+		}
 		raw, _ := json.Marshal(rec)
 		f, e := createPrivate(s.recordPath(agent))
 		if e != nil {
@@ -297,7 +316,13 @@ func (s store) remerge(agent string, rec installRecord, path, exe string, before
 	if err != nil {
 		return err
 	}
+	previousExecutable := rec.Executable
 	rec = installRecord{Schema: 2, Path: path, Before: base, Existed: existed, After: digest(desired)}
+	if agent == "agy" {
+		// A remerge keeps the previous generation's executable, so an
+		// interrupted or edited config can still be unwound by uninstall.
+		rec.Schema, rec.Executable, rec.PreviousExecutable = 3, exe, previousExecutable
+	}
 	updated, _ := json.Marshal(rec)
 	if err = replaceConfig(s.recordPath(agent), oldRecord, true, updated); err != nil {
 		return err
@@ -358,7 +383,7 @@ func (s store) uninstallAgentWith(agent string, strip stripFunc) error {
 	if digest(current) == digest(rec.Before) && exists == rec.Existed {
 		return os.Remove(s.recordPath(agent))
 	}
-	if exists && strip != nil && digest(current) != rec.After && !(rec.Schema == 2 && digest(current) == rec.PreviousAfter) {
+	if exists && strip != nil && digest(current) != rec.After && !(rec.Schema >= 2 && digest(current) == rec.PreviousAfter) {
 		stripped, err := strip(current)
 		if err != nil {
 			return err
@@ -373,7 +398,7 @@ func (s store) uninstallAgentWith(agent string, strip stripFunc) error {
 		}
 		return os.Remove(s.recordPath(agent))
 	}
-	if !exists || (digest(current) != rec.After && !(rec.Schema == 2 && digest(current) == rec.PreviousAfter)) {
+	if !exists || (digest(current) != rec.After && !(rec.Schema >= 2 && digest(current) == rec.PreviousAfter)) {
 		return errors.New("codex_config_changed")
 	}
 	if rec.Existed {
