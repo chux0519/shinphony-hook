@@ -118,6 +118,26 @@ func (m Manager) InstalledAgents() ([]string, error) {
 	return agents, nil
 }
 
+// AgentConfigPaths lists the files Configure reads for one agent, so a caller
+// can tell whether a refused config changed and a retry is justified.
+func (m Manager) AgentConfigPaths(agent string) ([]string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, errConfig
+	}
+	switch agent {
+	case "codex":
+		return []string{codexConfigPath(home), codexHooksPath(home)}, nil
+	case "claude":
+		return []string{claudeConfigPath(home)}, nil
+	case "dsh":
+		return []string{dshConfigPath(home)}, nil
+	case "agy":
+		return []string{agyConfigPath(home)}, nil
+	}
+	return nil, errConfig
+}
+
 func (m Manager) Pair(profile, lane, host, code string) error {
 	return m.PairE2E(profile, lane, host, code, nil, false)
 }

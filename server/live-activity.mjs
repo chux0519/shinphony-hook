@@ -102,6 +102,10 @@ export function maybeAutoStart(relay, device, host, now) {
   device, PENDING + randomBytes(12).toString('hex'), host, hash(ticket), now + PENDING_START_TTL, eventId);
   const details = { category: agg.attention.length ? 'approval_required' : 'task_started', agent: lead.agent,
     project: lead.project, visibility: 'silent' };
+  // No route_json: the relay keeps a sealed route only until delivery (see
+  // Relay.clean and the "route kept only until delivery" test), so there is
+  // none to carry into an activity it starts by itself. Its tap opens the
+  // host's session list instead of guessing a pane (iter-20261115-2030, T4).
   relay.run(`INSERT INTO events (host_key,event_id,device,host,status,created,expires,due,attempts,state,context_json,details_json,host_ref,live_lines,live_only,start_json)
     VALUES (?,?,?,?,?,?,?,?,0,'queued',NULL,?,?,?,2,?)`, row.key, eventId, device, host,
   agg.attention.length ? 'attention' : 'completed', now, now + PENDING_START_TTL, now, JSON.stringify(details),

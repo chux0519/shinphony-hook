@@ -8,6 +8,11 @@ import (
 var checkCodexHooks = func() (int, int, error) { return codexHookTrust(false) }
 
 func configureSetupAgents(manager notifier.Manager, requested, exe string) error {
+	// An install from before the scope record counts as "auto", so setting up
+	// one agent now must not turn that into a single-agent scope.
+	if _, err := migrateAgentScopeOnce(manager); err != nil {
+		return err
+	}
 	agents := []string{requested}
 	if requested == "auto" {
 		var err error
@@ -34,6 +39,10 @@ func configureSetupAgents(manager notifier.Manager, requested, exe string) error
 				return err
 			}
 		}
+	}
+	// Only a setup that reached the configs records its scope.
+	if err := recordSetupScope(manager, requested); err != nil {
+		return err
 	}
 	for _, agent := range agents {
 		// Codex runs new hooks only after review; say so rather than claim

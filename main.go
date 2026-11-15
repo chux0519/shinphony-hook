@@ -135,29 +135,22 @@ func run() error {
 		return updateBuildInfo()
 	}
 	if args[0] == "uninstall-codex-hook" {
-		return (notifier.Manager{Directory: *creds}).Uninstall("codex")
+		m := notifier.Manager{Directory: *creds}
+		if err = m.Uninstall("codex"); err != nil {
+			return err
+		}
+		// Keep the removal: an automatic refresh must not add the agent back.
+		return recordAgentUninstall(m, "codex")
 	}
 	if args[0] == "refresh-integrations" {
 		exe, e := serviceExecutable(*dir)
 		if e != nil {
 			return e
 		}
-		m := notifier.Manager{Directory: *creds}
-		agents, e := m.InstalledAgents()
-		if e != nil {
-			return e
-		}
-		for _, agent := range agents {
-			if e = m.Configure(agent, exe, true); e != nil {
-				return e
-			}
-			if agent == "codex" {
-				if e = installTaskSkill(exe); e != nil {
-					return e
-				}
-			}
-		}
-		return nil
+		// Installed agents refresh as before; with the "auto" scope agents
+		// detected since setup join here, at most once an hour.
+		_, e = refreshIntegrationsAt(notifier.Manager{Directory: *creds}, exe, time.Now())
+		return e
 	}
 	if err = prepareDir(*dir); err != nil {
 		return errors.New("unsafe_state_directory")
@@ -299,6 +292,13 @@ func serve(ctx context.Context, dir string, send sender, credentialDirs ...strin
 		}
 		jobDone = make(chan error, 1)
 		go func(ch chan error) { ch <- jobsWorker(jobCtx, q, notifier.Manager{Directory: credentialDirs[0]}, exe) }(jobDone)
+		go func() {
+			// Joining agents detected after setup is maintenance, never work for
+			// the event handler: the start only adds what is missing and never
+			// rewrites an installed agent's config. It must not take the service
+			// down either.
+			_, _ = joinDetectedAgentsAt(notifier.Manager{Directory: credentialDirs[0]}, exe, time.Now())
+		}()
 		defer func() {
 			stopJobs()
 			if jobDone != nil {
@@ -481,7 +481,15 @@ func serve(ctx context.Context, dir string, send sender, credentialDirs ...strin
 		if len(credentialDirs) > 0 {
 			creds = credentialDirs[0]
 		}
-		json.NewEncoder(w).Encode(map[string]any{"schema": 1, "version": version, "releaseSequence": sequence(), "apiVersion": 2, "setupJobs": len(credentialDirs) > 0, "service": "running", "queue": counts, "deliveryVerified": false, "executable": exe, "credentialsDirectory": creds, "update": updateProgress(dir)})
+		// One row per supported agent, read-only: a refusal and its reason stay
+		// visible without the App triggering any install.
+		agents := []agentRecord{}
+		if creds != "" {
+			if records, e := agentRecords(notifier.Manager{Directory: creds}); e == nil {
+				agents = records
+			}
+		}
+		json.NewEncoder(w).Encode(map[string]any{"schema": 1, "version": version, "releaseSequence": sequence(), "apiVersion": 2, "setupJobs": len(credentialDirs) > 0, "service": "running", "queue": counts, "deliveryVerified": false, "executable": exe, "credentialsDirectory": creds, "update": updateProgress(dir), "agents": agents})
 	})
 	mux.HandleFunc("POST /v1/events", func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, 4096)

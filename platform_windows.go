@@ -166,6 +166,34 @@ func lockDir(dir string) (func(), error) {
 	}
 	return func() { windows.CloseHandle(h) }, nil
 }
+
+// lockFilePath takes an exclusive lock on one private file without waiting.
+// Closing the handle releases it; the file itself stays, so two callers never
+// lock different files for the same name.
+func lockFilePath(path string) (func(), error) {
+	p, err := windows.UTF16PtrFromString(path)
+	if err != nil {
+		return nil, err
+	}
+	a, err := attributes()
+	if err != nil {
+		return nil, err
+	}
+	h, err := windows.CreateFile(p, windows.GENERIC_READ|windows.GENERIC_WRITE, windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE, a, windows.OPEN_ALWAYS, windows.FILE_FLAG_OPEN_REPARSE_POINT, 0)
+	if err != nil {
+		return nil, err
+	}
+	if err = privatePath(path, false); err != nil {
+		windows.CloseHandle(h)
+		return nil, err
+	}
+	var ov windows.Overlapped
+	if err = windows.LockFileEx(h, windows.LOCKFILE_EXCLUSIVE_LOCK|windows.LOCKFILE_FAIL_IMMEDIATELY, 0, 1, 0, &ov); err != nil {
+		windows.CloseHandle(h)
+		return nil, errRefreshBusy
+	}
+	return func() { windows.CloseHandle(h) }, nil
+}
 func pipePath(dir string) string {
 	sid, _ := currentSID()
 	sum := sha256.Sum256([]byte(sid.String() + ":" + strings.ToLower(filepath.Clean(dir))))

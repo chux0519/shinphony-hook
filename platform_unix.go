@@ -79,6 +79,26 @@ func lockDir(dir string) (func(), error) {
 	}
 	return func() { f.Close() }, nil
 }
+
+// lockFilePath takes an exclusive lock on one private file without waiting.
+// Closing the file releases it; the file itself stays, so two callers never lock
+// different inodes for the same name.
+func lockFilePath(path string) (func(), error) {
+	fd, err := syscall.Open(path, syscall.O_CREAT|syscall.O_RDWR|syscall.O_NOFOLLOW, 0600)
+	if err != nil {
+		return nil, err
+	}
+	f := os.NewFile(uintptr(fd), path)
+	if err = privatePath(path, false); err != nil {
+		f.Close()
+		return nil, err
+	}
+	if err = syscall.Flock(fd, syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		f.Close()
+		return nil, errRefreshBusy
+	}
+	return func() { f.Close() }, nil
+}
 func privateUmask() error { syscall.Umask(0077); return nil }
 
 // Hooks may run inside an agent's sandbox: DSH's bwrap backend mounts a fresh
