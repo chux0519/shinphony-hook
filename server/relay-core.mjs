@@ -45,7 +45,7 @@ export class Relay {
       CREATE INDEX IF NOT EXISTS events_created ON events(created);
       CREATE INDEX IF NOT EXISTS events_host_time ON events(host_key, created);`);
     const columns = this.db.columns('events');
-    for (const [name, type] of [['apns_status', 'INTEGER'], ['apns_reason', 'TEXT'], ['context_json', 'TEXT'], ['details_json', 'TEXT'], ['live_only', 'INTEGER'], ['start_json', 'TEXT'], ['e2e_json', 'TEXT'], ['host_ref', 'TEXT'], ['live_lines', 'INTEGER']]) {
+    for (const [name, type] of [['apns_status', 'INTEGER'], ['apns_reason', 'TEXT'], ['context_json', 'TEXT'], ['details_json', 'TEXT'], ['live_only', 'INTEGER'], ['start_json', 'TEXT'], ['e2e_json', 'TEXT'], ['route_json', 'TEXT'], ['host_ref', 'TEXT'], ['live_lines', 'INTEGER']]) {
       if (!columns.includes(name)) this.db.exec(`ALTER TABLE events ADD COLUMN ${name} ${type}`);
     }
     this.lastClean = -Infinity;
@@ -66,7 +66,7 @@ export class Relay {
     this.run("UPDATE events SET state='expired' WHERE state='queued' AND expires <= ?", now);
     this.run("UPDATE events SET context_json=NULL, details_json=NULL, start_json=NULL WHERE state!='queued' AND (context_json IS NOT NULL OR details_json IS NOT NULL OR start_json IS NOT NULL)");
     // The sealed envelope is kept only until delivery: it is never an archive.
-    this.run("UPDATE events SET e2e_json=NULL WHERE state!='queued' AND e2e_json IS NOT NULL");
+    this.run("UPDATE events SET e2e_json=NULL, route_json=NULL WHERE state!='queued' AND (e2e_json IS NOT NULL OR route_json IS NOT NULL)");
     this.run('DELETE FROM events WHERE created < ?', now - 86400000);
     this.run('DELETE FROM session_states WHERE updated < ?', now - RUNNING_TTL * 3);
   }
@@ -172,7 +172,7 @@ export class Relay {
       return { ok: true };
     }
     if (path === '/v1/events' && method === 'POST') {
-      fields(body, ['eventId', 'status', 'context', 'e2e', 'hostRef', 'silent', 'liveLines', ...detailFields]);
+      fields(body, ['eventId', 'status', 'context', 'e2e', 'routeE2E', 'hostRef', 'silent', 'liveLines', ...detailFields]);
       let context, details, sealed;
       try { context = taskContext(body.context); } catch { fail(400, 'invalid_context'); }
       try { details = agentDetails(body); } catch { fail(400, 'invalid_details'); }
@@ -201,7 +201,7 @@ export class Relay {
           this.get('SELECT count(*) n FROM events WHERE host_key=? AND created>?', hostKey, now - 3600000).n >= 600 ||
           this.get('SELECT count(*) n FROM events WHERE device=? AND created>?', host.device, now - 3600000).n >= 1200) fail(429, 'rate_limit');
       if (this.get('SELECT count(*) n FROM events').n >= 100000) fail(503, 'capacity');
-      this.run("INSERT INTO events (host_key,event_id,device,host,status,created,expires,due,attempts,state,context_json,details_json,e2e_json,host_ref,live_lines) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 'queued', ?, ?, ?, ?, ?)", hostKey, body.eventId, host.device, host.host, body.status, now, now + 300000, now, context ? JSON.stringify(context) : null, details ? JSON.stringify(details) : null, sealed ? JSON.stringify(sealed.e2e) : null, sealed ? sealed.hostRef : null, sealed?.liveLines ? 1 : 0);
+      this.run("INSERT INTO events (host_key,event_id,device,host,status,created,expires,due,attempts,state,context_json,details_json,e2e_json,route_json,host_ref,live_lines) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 'queued', ?, ?, ?, ?, ?, ?)", hostKey, body.eventId, host.device, host.host, body.status, now, now + 300000, now, context ? JSON.stringify(context) : null, details ? JSON.stringify(details) : null, sealed ? JSON.stringify(sealed.e2e) : null, sealed?.route ? JSON.stringify(sealed.route) : null, sealed ? sealed.hostRef : null, sealed?.liveLines ? 1 : 0);
       if (sealed) {
         // One hostRef per pairing, learnt from the events it seals.
         this.run('UPDATE hosts SET host_ref=?, live_lines=? WHERE device=? AND host=?', sealed.hostRef, sealed.liveLines ? 1 : 0, host.device, host.host);
@@ -262,7 +262,7 @@ export class Relay {
       this.run("UPDATE events SET state=?, due=?, apns_status=?, apns_reason=? WHERE host_key=? AND event_id=? AND state='queued'", state,
         this.now() + 15000 * 2 ** attempts, Number.isInteger(result.status) ? result.status : null,
         /^[A-Za-z]{1,80}$/.test(result.reason ?? '') ? result.reason : null, event.host_key, event.event_id);
-      if (state !== 'queued') this.run('UPDATE events SET context_json=NULL, details_json=NULL, start_json=NULL, e2e_json=NULL WHERE host_key=? AND event_id=?', event.host_key, event.event_id);
+      if (state !== 'queued') this.run('UPDATE events SET context_json=NULL, details_json=NULL, start_json=NULL, e2e_json=NULL, route_json=NULL WHERE host_key=? AND event_id=?', event.host_key, event.event_id);
     } finally { this.busy = false; }
   }
 }

@@ -77,20 +77,45 @@ test('the served pair script installs the helper and pairs', () => {
     'Get-FileHash',
     'windows-sshd status',
     'windows-sshd enable',
+    'windows-sshd prepare-keys',
     '-Verb RunAs',
-    'Shinphony needs administrator permission to turn on OpenSSH Server and add your key.',
-    "& $binary pair",
+    'Shinphony needs administrator permission to turn on OpenSSH Server.',
+    '$needsAdmin = (-not $status.running)',
     'Continue? [Y/n]',
   ]) {
     assert.ok(script.includes(line), line);
   }
+  // Pairing runs exactly once, in the user's own window: the elevated block
+  // never holds the QR.
+  assert.equal(script.split('& $binary pair').length - 1, 1, 'pair runs once');
+  assert.equal(script.includes('keys install'), false, 'the script never writes a key itself');
+});
+
+test('the pair script elevates only the setup steps', () => {
+  const script = renderPairPs1(PAIR_TEMPLATE, VERIFIED, BASE);
+  const start = script.indexOf('$command = @"');
+  const end = script.indexOf('"@', start + 1);
+  assert.ok(start > 0 && end > start, 'the elevated command is one here-string');
+  const elevated = script.slice(start, end);
+  // Enabling sshd and preparing the administrator key file need administrator
+  // rights; the pairing itself does not and stays in the normal window.
+  assert.ok(elevated.includes('windows-sshd enable'), 'the elevated window enables sshd');
+  assert.ok(elevated.includes('windows-sshd prepare-keys'), 'the elevated window prepares the key file');
+  assert.equal(elevated.includes('& $binary pair'), false, 'the elevated window never pairs');
+  assert.equal(elevated.includes('keys install'), false, 'the elevated window installs no key');
+  assert.ok(elevated.includes("if ('$prepare' -eq 'true')"), 'the elevated window prepares keys only for this account');
+  assert.ok(elevated.includes('-ne \'$sid\''), 'the elevated window checks the account');
+  // The elevated window only appends to the log the normal window created.
+  assert.equal(elevated.includes('New-Item'), false, 'the elevated window creates no file');
+  assert.ok(elevated.includes('*>> `$log'), 'the elevated window appends to the log');
 });
 
 test('the pair script only asks for administrator permission when it is needed', () => {
   const script = renderPairPs1(PAIR_TEMPLATE, VERIFIED, BASE);
   // The elevation branch is guarded by the status, so an account whose sshd is
-  // running and whose key file is its own pairs in the same console.
-  assert.ok(script.includes('$needsAdmin = $status.isAdmin -or (-not $status.running)'));
+  // running and whose firewall rule is enabled pairs in the same console.
+  assert.ok(script.includes('$needsAdmin = (-not $status.running)'));
+  assert.ok(script.includes('if ($needsAdmin) {'));
   assert.ok(script.includes('& $binary pair'));
 });
 
@@ -118,5 +143,43 @@ test('the setup scripts never exit the user window and never write a temp script
     assert.ok(script.includes('shinphony_setup_stopped: '), `${name} must use the Stop-Setup marker`);
     assert.ok(script.includes('-EncodedCommand'), `${name} must pass the elevated command as -EncodedCommand`);
     assert.ok(script.trimEnd().endsWith('}'), `${name} must end with the top-level catch`);
+  }
+});
+
+// The bug this guards against: `Set-Acl` and `SetOwner` from a non-elevated
+// window fail with SeSecurityPrivilege and can leave the helper folder owned by
+// Administrators, which made every later run fail the same way.
+test('the setup scripts fix access rules only and never change the owner', () => {
+  for (const [name, script] of [
+    ['ssh.ps1', renderSSHPs1(TEMPLATE, VERIFIED, BASE)],
+    ['pair.ps1', renderPairPs1(PAIR_TEMPLATE, VERIFIED, BASE)],
+  ]) {
+    assert.equal(script.includes('Set-Acl'), false, `${name} must not use Set-Acl`);
+    assert.equal(script.includes('SetOwner'), false, `${name} must never set an owner`);
+    assert.ok(script.includes("GetAccessControl('Access')"), `${name} reads the access section only`);
+    assert.ok(script.includes("GetAccessControl('Owner')"), `${name} reads the owner separately`);
+    assert.ok(script.includes('.SetAccessControl($acl)'), `${name} writes the access section back`);
+    // An unexpected owner is one sentence with the exact repair command.
+    assert.ok(script.includes('belongs to another account'), `${name} explains a foreign owner`);
+    assert.ok(script.includes('icacls "'), `${name} names icacls`);
+    assert.ok(script.includes('/setowner "'), `${name} names /setowner`);
+    assert.ok(script.includes('/T /C'), `${name} repairs the folder tree`);
+    assert.ok(script.includes('then run this command again'), `${name} says to rerun`);
+  }
+});
+
+// The elevated window writes a log the normal window prints, and the log file
+// itself is created before elevation so it stays owned by the user.
+test('the elevated window keeps its errors and logs them for the normal window', () => {
+  for (const [name, script] of [
+    ['ssh.ps1', renderSSHPs1(TEMPLATE, VERIFIED, BASE)],
+    ['pair.ps1', renderPairPs1(PAIR_TEMPLATE, VERIFIED, BASE)],
+  ]) {
+    assert.ok(script.includes("('shinphony-elevated-' + [System.Guid]::NewGuid().ToString('N') + '.log')"), `${name} names the log`);
+    assert.ok(script.includes('New-Item -ItemType File -Path $log'), `${name} creates the log before elevation`);
+    assert.ok(script.includes("Read-Host 'Press Enter to close this window.'"), `${name} keeps the elevated window open`);
+    assert.ok(script.includes('shinphony_elevated=failed'), `${name} marks a failed elevated step`);
+    assert.ok(script.includes('What the administrator window reported:'), `${name} prints the log`);
+    assert.ok(script.includes('Remove-Item -LiteralPath $log'), `${name} removes the log`);
   }
 });

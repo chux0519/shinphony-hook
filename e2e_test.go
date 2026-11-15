@@ -86,18 +86,40 @@ type e2eVectors struct {
 	Nonce               string      `json:"nonce"`
 	Plaintext           string      `json:"plaintextJSON"`
 	Envelope            e2eEnvelope `json:"envelope"`
-	Notes               string      `json:"notes"`
+	// The tap route, sealed on its own for the Live Activity. It uses the same
+	// hostRef and AAD, so the phone opens both envelopes with one key.
+	RoutePlaintext string      `json:"routePlaintextJSON"`
+	RouteEnvelope  e2eEnvelope `json:"routeEnvelope"`
+	Notes          string      `json:"notes"`
 }
 
 const vectorProfile = "phone"
-const vectorPlaintext = `{"category":"approval_required","agent":"claude","session":"0123456789abcdef0123456789abcdef","title":"Allow Bash?","body":"npm test -- --watch=false","project":"hook","visibility":"banner","lines":["$ npm test","61 passing","Done in 12.4s"]}`
+const vectorPlaintextFields = `{"category":"approval_required","agent":"claude","session":"0123456789abcdef0123456789abcdef","title":"Allow Bash?","body":"npm test -- --watch=false","project":"hook","visibility":"banner","lines":["$ npm test","61 passing","Done in 12.4s"]`
+
+// vectorRoute is the projection a tap resolves: no preview, routing only.
+func vectorRoute() taskContext {
+	return taskContext{Version: 1, Agent: "codex", Thread: "0123456789abcdef0123456789abcdef",
+		Title: "Fix the tap route", Multiplexer: "tmux", Session: "hook", Window: "0",
+		Route: "evt-01", Binary: strings.Repeat("ab", 32)}
+}
 
 func buildE2EVectors(t *testing.T) e2eVectors {
 	t.Helper()
 	phone, eph := vectorKey(t, "phone"), vectorKey(t, "ephemeral")
 	nonce := vectorBytes("nonce", e2eNonceBytes)
 	hostRef := e2eHostRef(vectorProfile)
-	envelope, err := e2eSealWith(eph, nonce, phone.PublicKey().Bytes(), hostRef, []byte(vectorPlaintext))
+	route := vectorRoute()
+	routeRaw, err := json.Marshal(route)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plaintext := vectorPlaintextFields + `,"route":` + string(routeRaw) + `}`
+	envelope, err := e2eSealWith(eph, nonce, phone.PublicKey().Bytes(), hostRef, []byte(plaintext))
+	if err != nil {
+		t.Fatal(err)
+	}
+	routeEnvelope, err := e2eSealWith(vectorKey(t, "route-ephemeral"), vectorBytes("route-nonce", e2eNonceBytes),
+		phone.PublicKey().Bytes(), hostRef, routeRaw)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,8 +128,10 @@ func buildE2EVectors(t *testing.T) e2eVectors {
 		Profile: vectorProfile, HostRef: hostRef, AAD: string(e2eAAD(hostRef)),
 		PhonePublicKey: b64(phone.PublicKey().Bytes()), PhonePrivateKey: b64(phone.Bytes()),
 		EphemeralPublicKey: b64(eph.PublicKey().Bytes()), EphemeralPrivateKey: b64(eph.Bytes()),
-		Nonce: b64(nonce), Plaintext: vectorPlaintext, Envelope: envelope,
-		Notes: "Fixed test keys and nonce; derived from SHA-256 of their labels. Never use them for a real pairing.",
+		Nonce: b64(nonce), Plaintext: plaintext, Envelope: envelope,
+		RoutePlaintext: string(routeRaw), RouteEnvelope: routeEnvelope,
+		Notes: "Fixed test keys and nonce; derived from SHA-256 of their labels. Never use them for a real pairing. " +
+			"routeEnvelope is the Live Activity's tap route, sealed separately under the same hostRef.",
 	}
 }
 
@@ -144,6 +168,26 @@ func TestE2EVectors(t *testing.T) {
 	}
 	if string(opened) != want.Plaintext {
 		t.Fatal(string(opened))
+	}
+	// The route envelope opens with the same key and AAD, and carries routing
+	// only: no preview, and the route id is the event a tap lands on.
+	openedRoute, err := e2eOpen(phone, want.RouteEnvelope, want.HostRef)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(openedRoute) != want.RoutePlaintext {
+		t.Fatal(string(openedRoute))
+	}
+	if _, err = e2eOpen(phone, want.RouteEnvelope, e2eHostRef("other")); err == nil {
+		t.Fatal("the route envelope opened under another hostRef")
+	}
+	if raw, err := json.Marshal(want.RouteEnvelope); err != nil || len(raw) > e2eMaxRouteEnvelope {
+		t.Fatal(len(raw), err)
+	}
+	var route taskContext
+	if err = json.Unmarshal(openedRoute, &route); err != nil || route.Route != "evt-01" || route.Preview != "" ||
+		route.Thread == "" || route.Binary == "" {
+		t.Fatalf("%+v %v", route, err)
 	}
 	if want.HostRef != e2eHostRef(want.Profile) || len(want.HostRef) != 22 {
 		t.Fatal(want.HostRef)
@@ -241,6 +285,28 @@ func TestE2EFieldsWithinBounds(t *testing.T) {
 	if fields["category"] != "approval_required" || fields["hostRef"] != hostRef || fields["silent"] != false {
 		t.Fatal(fields)
 	}
+	// The tap route rides in the same envelope, next to the details.
+	if p.Route == nil || p.Route.Version != context.Version || p.Route.Route != context.Route ||
+		p.Route.Thread != context.Thread || p.Route.Preview != "" {
+		t.Fatalf("route: %+v", p.Route)
+	}
+	// And it goes out on its own for the Live Activity, inside its own bound.
+	routeEnvelope, ok := fields["routeE2E"].(e2eEnvelope)
+	if !ok {
+		t.Fatal(fields["routeE2E"])
+	}
+	if raw, err := json.Marshal(routeEnvelope); err != nil || len(raw) > e2eMaxRouteEnvelope {
+		t.Fatal(len(raw), err)
+	}
+	openedRoute, err := e2eOpen(phone, routeEnvelope, hostRef)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var route taskContext
+	if err = json.Unmarshal(openedRoute, &route); err != nil || route.Version != 1 ||
+		route.Route != p.Route.Route || route.Multiplexer != p.Route.Multiplexer {
+		t.Fatal(route, err)
+	}
 	for _, leaked := range []string{"title", "body", "project", "agent", "session", "visibility"} {
 		if _, ok := fields[leaked]; ok {
 			t.Fatalf("%s left in the request", leaked)
@@ -251,6 +317,10 @@ func TestE2EFieldsWithinBounds(t *testing.T) {
 		&eventDetails{Category: "task_started", Visibility: "silent"}, nil)
 	if err != nil || silent["silent"] != true || silent["category"] != "task_started" {
 		t.Fatal(silent, err)
+	}
+	// No context: no route to carry, so no second envelope at all.
+	if _, ok := silent["routeE2E"]; ok {
+		t.Fatal("a route without a context")
 	}
 }
 
@@ -303,6 +373,137 @@ func TestE2EFieldsNeedCategory(t *testing.T) {
 	phone := vectorKey(t, "phone")
 	if _, err := e2eFields(randomReader, phone.PublicKey().Bytes(), e2eHostRef("phone"), &eventDetails{Title: "x"}, nil); err == nil {
 		t.Fatal("sealed details without a category")
+	}
+}
+
+// A route that only barely fits: the display fields go, the routing fields
+// stay, so the tap still opens the right session.
+func TestE2ERouteTrimsToTheActivityBound(t *testing.T) {
+	phone := vectorKey(t, "phone")
+	hostRef := e2eHostRef("phone")
+	route := &taskContext{Version: 1, Agent: "codex", Thread: strings.Repeat("t", 64), Title: strings.Repeat("好", 400),
+		Multiplexer: "hc", Session: strings.Repeat("s", 80), Window: strings.Repeat("w", 80), Route: "evt-01",
+		Binary: strings.Repeat("b", 64), Parent: "t1abcd", ParentTitle: strings.Repeat("p", 120), Space: strings.Repeat("q", 80)}
+	title := route.Title
+	envelope, err := e2eSealRoute(func(plaintext []byte) (e2eEnvelope, error) {
+		return e2eSeal(randomReader, phone.PublicKey().Bytes(), hostRef, plaintext)
+	}, route)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := json.Marshal(envelope)
+	if err != nil || len(raw) > e2eMaxRouteEnvelope {
+		t.Fatal(len(raw), err)
+	}
+	opened, err := e2eOpen(phone, envelope, hostRef)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got taskContext
+	if err = json.Unmarshal(opened, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Title == title || !strings.HasPrefix(title, got.Title) {
+		t.Fatalf("title not trimmed on a rune boundary: %q", got.Title)
+	}
+	for _, field := range []struct{ name, value string }{
+		{"version", "1"}, {"agent", got.Agent}, {"thread", got.Thread}, {"multiplexer", "hc"},
+		{"session", got.Session}, {"route", "evt-01"}, {"binary", got.Binary},
+	} {
+		if field.value == "" {
+			t.Fatalf("routing field %s was trimmed away", field.name)
+		}
+	}
+	if got.Agent != "codex" || !utf8.ValidString(got.Title) {
+		t.Fatalf("%+v", got)
+	}
+}
+
+// Both envelopes carry the same route, even when the activity's smaller bound
+// forced a trim: a notification tap and a Live Activity tap agree.
+func TestE2ERouteIsTheSameInBothEnvelopes(t *testing.T) {
+	phone := vectorKey(t, "phone")
+	hostRef := e2eHostRef("phone")
+	context := vectorRoute()
+	context.Title = strings.Repeat("好", 400)
+	fields, err := e2eFields(randomReader, phone.PublicKey().Bytes(), hostRef,
+		&eventDetails{Category: "task_complete", Title: "done", Visibility: "banner"}, &context)
+	if err != nil {
+		t.Fatal(err)
+	}
+	open := func(value any) taskContext {
+		t.Helper()
+		raw, err := json.Marshal(value)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var envelope e2eEnvelope
+		if err = json.Unmarshal(raw, &envelope); err != nil {
+			t.Fatal(err)
+		}
+		opened, err := e2eOpen(phone, envelope, hostRef)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var route taskContext
+		if err = json.Unmarshal(opened, &route); err != nil {
+			t.Fatal(err)
+		}
+		return route
+	}
+	var sealed e2ePlaintext
+	opened, err := e2eOpen(phone, fields["e2e"].(e2eEnvelope), hostRef)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = json.Unmarshal(opened, &sealed); err != nil || sealed.Route == nil {
+		t.Fatal(err)
+	}
+	inActivity := open(fields["routeE2E"])
+	if inActivity.Title == context.Title {
+		t.Fatal("the activity route was not trimmed to its bound")
+	}
+	if *sealed.Route != inActivity {
+		t.Fatalf("routes differ: %+v / %+v", *sealed.Route, inActivity)
+	}
+	if inActivity.Route != "evt-01" || inActivity.Session != "hook" || inActivity.Multiplexer != "tmux" {
+		t.Fatalf("%+v", inActivity)
+	}
+}
+
+// The route envelope is a separate seal with the same AAD: it opens with the
+// phone's key under this hostRef only.
+func TestE2ERouteEnvelopeIsItsOwnSeal(t *testing.T) {
+	phone := vectorKey(t, "phone")
+	hostRef := e2eHostRef("phone")
+	route := vectorRoute()
+	seal := func(plaintext []byte) (e2eEnvelope, error) {
+		return e2eSeal(randomReader, phone.PublicKey().Bytes(), hostRef, plaintext)
+	}
+	first, err := e2eSealRoute(seal, &route)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := e2eSealRoute(seal, &route)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.EPK == second.EPK || first.N == second.N || first.CT == second.CT {
+		t.Fatal("route envelope reused a key or nonce")
+	}
+	if _, err = e2eOpen(phone, first, e2eHostRef("other")); err == nil {
+		t.Fatal("route opened under another hostRef")
+	}
+	if _, err = e2eOpen(vectorKey(t, "stranger"), first, hostRef); err == nil {
+		t.Fatal("route opened with another key")
+	}
+	// The route never carries terminal text.
+	opened, err := e2eOpen(phone, first, hostRef)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(opened), "preview") || !strings.Contains(string(opened), "\"route\":\"evt-01\"") {
+		t.Fatal(string(opened))
 	}
 }
 

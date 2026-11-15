@@ -32,19 +32,39 @@ if ($expected -notmatch '^[0-9a-f]{64}$') {
 
 $dest = Join-Path $env:USERPROFILE '.shinphony-agent'
 $binary = Join-Path $dest ("shinphony-hook-$expected.exe")
+$me = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+$repair = 'In an administrator PowerShell run: icacls "' + $dest + '" /setowner "' + $me.Name + '" /T /C  then run this command again.'
 
 # The helper belongs to the user who runs this: a private directory, never a
 # link, and an existing file is reused only when its hash matches exactly.
 if (-not (Test-Path -LiteralPath $dest)) { New-Item -ItemType Directory -Path $dest | Out-Null }
-if ((Get-Item -LiteralPath $dest -Force).Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+$dir = Get-Item -LiteralPath $dest -Force
+if ($dir.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
   Stop-Setup 'Refusing to use a linked .shinphony-agent.'
 }
-$me = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
-$acl = New-Object System.Security.AccessControl.DirectorySecurity
+# Who owns the folder decides whether this can go on. A non-elevated process
+# never changes an owner: that needs SeRestorePrivilege, and an owner it cannot
+# write is exactly what made the next run fail with SeSecurityPrivilege.
+$owner = $dir.GetAccessControl('Owner').GetOwner([System.Security.Principal.SecurityIdentifier])
+if ($owner.Value -ne $me.User.Value) {
+  Stop-Setup ('The .shinphony-agent folder belongs to another account. ' + $repair)
+}
+# Access section only: no owner and no SACL is read or written, so this needs no
+# administrator rights. Entries for anyone else are dropped; the folder ends up
+# with one rule, for you.
+$acl = $dir.GetAccessControl('Access')
 $acl.SetAccessRuleProtection($true, $false)
-$acl.SetOwner($me)
-$acl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new($me, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow'))
-Set-Acl -LiteralPath $dest -AclObject $acl
+foreach ($rule in @($acl.Access)) {
+  $keep = $false
+  try { $keep = ($rule.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value -eq $me.User.Value) } catch { }
+  if (-not $keep) { $acl.RemoveAccessRuleSpecific($rule) | Out-Null }
+}
+$acl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new($me.User, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow'))
+try {
+  $dir.SetAccessControl($acl)
+} catch {
+  Stop-Setup ('Could not set the permissions of the .shinphony-agent folder. ' + $repair)
+}
 
 if (Test-Path -LiteralPath $binary) {
   if ((Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash.ToLower() -ne $expected) {
@@ -74,39 +94,83 @@ if ($LASTEXITCODE -ne 0 -or -not $status) {
   Stop-Setup 'Could not check OpenSSH Server. Run this again from a normal PowerShell window.'
 }
 $status = $status | ConvertFrom-Json
-# An administrator's key goes to ProgramData\ssh, which needs elevation too, so
-# the whole pairing runs elevated for that account.
-$needsAdmin = $status.isAdmin -or (-not $status.running)
-
-if (-not $needsAdmin) {
-  & $binary pair
-  return
-}
-
-Write-Host 'Shinphony needs administrator permission to turn on OpenSSH Server and add your key.'
-$answer = Read-Host 'Continue? [Y/n]'
-if ($answer -ne '' -and $answer -notmatch '^(?i)y(es)?$') {
-  Write-Host 'Nothing changed.'
-  return
-}
-
-# One UAC prompt, and no file is written: the elevated window receives the fixed
-# command as -EncodedCommand (UTF-16LE base64). It turns sshd on when the status
-# says it is needed and then runs the pairing, so the QR code and the pairing
-# itself happen in that window, which stays open at the end.
-$command = @"
-`$status = (& '$quoted' windows-sshd status) -join [Environment]::NewLine | ConvertFrom-Json
-if ((-not `$status.running) -or (-not `$status.firewall.exists) -or (-not `$status.firewall.enabled)) { & '$quoted' windows-sshd enable }
-& '$quoted' pair
-Read-Host 'Press Enter to close this window.'
-"@
-$encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command))
+# One privileged window, for privileged work only: turning sshd on and preparing
+# administrators_authorized_keys. Pairing itself then runs here, in your window,
+# so the QR, the prompts and every state file belong to you.
+$needsAdmin = (-not $status.running) -or (-not $status.firewall.exists) -or (-not $status.firewall.enabled)
+if ($needsAdmin) {
+  Write-Host 'Shinphony needs administrator permission to turn on OpenSSH Server.'
+  $answer = Read-Host 'Continue? [Y/n]'
+  if ($answer -ne '' -and $answer -notmatch '^(?i)y(es)?$') {
+    Write-Host 'Nothing changed.'
+    return
+  }
+  # The log is created here, before elevation, so it is yours; the elevated
+  # window only appends to it and this window prints it when the step fails.
+  $log = Join-Path ([System.IO.Path]::GetTempPath()) ('shinphony-elevated-' + [System.Guid]::NewGuid().ToString('N') + '.log')
+  New-Item -ItemType File -Path $log | Out-Null
+  $logQuoted = $log -replace "'", "''"
+  $sid = $me.User.Value
+  # prepare-keys is for this account's own key file, so the decision is made
+  # here: a standard user's key never goes to ProgramData\ssh, even when an
+  # administrator answers the UAC prompt.
+  $prepare = if ($status.isAdmin) { 'true' } else { 'false' }
+  # The elevated window recomputes the status it finds, so it turns sshd on only
+  # when it is off. It writes no script and receives no key material; its one
+  # sentence goes to the log and stays on screen when something fails.
+  $command = @"
+`$ErrorActionPreference = 'Stop'
+`$log = '$logQuoted'
+`$failed = `$false
 try {
-  Start-Process -FilePath 'powershell.exe' -Verb RunAs -Wait `
-    -ArgumentList @('-NoProfile', '-EncodedCommand', $encoded)
+  `$status = (& '$quoted' windows-sshd status) -join [Environment]::NewLine | ConvertFrom-Json
+  if ((-not `$status.running) -or (-not `$status.firewall.exists) -or (-not `$status.firewall.enabled)) {
+    & '$quoted' windows-sshd enable *>> `$log
+    if (`$LASTEXITCODE -ne 0) { throw 'OpenSSH Server could not be turned on.' }
+  }
+  if ('$prepare' -eq 'true') {
+    if ([System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value -ne '$sid') {
+      throw 'Administrator permission was given to a different account, so the administrator key file was not prepared.'
+    }
+    & '$quoted' windows-sshd prepare-keys *>> `$log
+    if (`$LASTEXITCODE -ne 0) { throw 'The administrator key file could not be prepared.' }
+  }
 } catch {
-  Stop-Setup 'Administrator permission was not given, so nothing changed.'
+  `$_ | Out-File -LiteralPath `$log -Append -Encoding UTF8
+  Write-Host `$_.Exception.Message -ForegroundColor Red
+  `$failed = `$true
 }
+if (`$failed) {
+  Add-Content -LiteralPath `$log -Value 'shinphony_elevated=failed'
+  Read-Host 'Press Enter to close this window.'
+}
+"@
+  $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command))
+  try {
+    Start-Process -FilePath 'powershell.exe' -Verb RunAs -Wait -ArgumentList @('-NoProfile', '-EncodedCommand', $encoded) | Out-Null
+  } catch {
+    Remove-Item -LiteralPath $log -Force -ErrorAction SilentlyContinue
+    Stop-Setup 'Administrator permission was not given, so nothing changed.'
+  }
+  $report = ''
+  if (Test-Path -LiteralPath $log) { $report = [System.IO.File]::ReadAllText($log) }
+  Remove-Item -LiteralPath $log -Force -ErrorAction SilentlyContinue
+  if ($report.Contains('shinphony_elevated=failed')) {
+    Write-Host 'What the administrator window reported:' -ForegroundColor Red
+    Write-Host $report
+    Stop-Setup 'OpenSSH Server or the administrator key file was not prepared. Run this again from a normal PowerShell window.'
+  }
+  if (-not $report) {
+    Stop-Setup 'Administrator permission was not given, so nothing changed.'
+  }
+  $status = (& $binary windows-sshd status) -join [Environment]::NewLine | ConvertFrom-Json
+  if (-not $status.running) {
+    Stop-Setup 'OpenSSH Server is still off. Run this again from a normal PowerShell window.'
+  }
+}
+# An administrator's key goes to ProgramData\ssh, so this pairing asks for one
+# more administrator prompt after the phone approves it. Nothing else elevates.
+& $binary pair
 }
 } catch {
   $text = "$($_.Exception.Message)"

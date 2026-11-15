@@ -11,9 +11,9 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
 # The advertised command is `irm ... | iex`, so this runs inside the user's own
-# window: it must never call `exit`, which would close that window. Stop-Setup
-# throws a marked message that the top-level catch prints, and the whole body
-# lives in one script block so a `return` leaves only this setup.
+# window: it must never call `exit`, which would close it. Stop-Setup throws a
+# marked message that the top-level catch prints, and the whole body lives in one
+# script block so a `return` leaves only this setup.
 function Stop-Setup($message) { throw ('shinphony_setup_stopped: ' + $message) }
 
 try {
@@ -35,19 +35,39 @@ if ($expected -notmatch '^[0-9a-f]{64}$') {
 
 $dest = Join-Path $env:USERPROFILE '.shinphony-agent'
 $binary = Join-Path $dest ("shinphony-hook-$expected.exe")
+$me = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+$repair = 'In an administrator PowerShell run: icacls "' + $dest + '" /setowner "' + $me.Name + '" /T /C  then run this command again.'
 
 # The helper belongs to the user who runs this: a private directory, never a
 # link, and an existing file is reused only when its hash matches exactly.
 if (-not (Test-Path -LiteralPath $dest)) { New-Item -ItemType Directory -Path $dest | Out-Null }
-if ((Get-Item -LiteralPath $dest -Force).Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+$dir = Get-Item -LiteralPath $dest -Force
+if ($dir.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
   Stop-Setup 'Refusing to use a linked .shinphony-agent.'
 }
-$me = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
-$acl = New-Object System.Security.AccessControl.DirectorySecurity
+# Who owns the folder decides whether this can go on. A non-elevated process
+# never changes an owner: that needs SeRestorePrivilege, and an owner it cannot
+# write is exactly what made the next run fail with SeSecurityPrivilege.
+$owner = $dir.GetAccessControl('Owner').GetOwner([System.Security.Principal.SecurityIdentifier])
+if ($owner.Value -ne $me.User.Value) {
+  Stop-Setup ('The .shinphony-agent folder belongs to another account. ' + $repair)
+}
+# Access section only: no owner and no SACL is read or written, so this needs no
+# administrator rights. Entries for anyone else are dropped; the folder ends up
+# with one rule, for you.
+$acl = $dir.GetAccessControl('Access')
 $acl.SetAccessRuleProtection($true, $false)
-$acl.SetOwner($me)
-$acl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new($me, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow'))
-Set-Acl -LiteralPath $dest -AclObject $acl
+foreach ($rule in @($acl.Access)) {
+  $keep = $false
+  try { $keep = ($rule.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value -eq $me.User.Value) } catch { }
+  if (-not $keep) { $acl.RemoveAccessRuleSpecific($rule) | Out-Null }
+}
+$acl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new($me.User, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow'))
+try {
+  $dir.SetAccessControl($acl)
+} catch {
+  Stop-Setup ('Could not set the permissions of the .shinphony-agent folder. ' + $repair)
+}
 
 if (Test-Path -LiteralPath $binary) {
   if ((Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash.ToLower() -ne $expected) {
@@ -99,19 +119,48 @@ if ($needsAdmin) {
   Write-Host 'Shinphony needs administrator permission to turn on OpenSSH Server.'
   $answer = Read-Host 'Continue? [Y/n]'
   if ($answer -eq '' -or $answer -match '^(?i)y(es)?$') {
-    # One UAC prompt, and no file is written: the elevated window receives the
+    # The log is created here, before elevation, so it is yours; the elevated
+    # window only appends to it and this window prints it when the step fails.
+    $log = Join-Path ([System.IO.Path]::GetTempPath()) ('shinphony-elevated-' + [System.Guid]::NewGuid().ToString('N') + '.log')
+    New-Item -ItemType File -Path $log | Out-Null
+    $logQuoted = $log -replace "'", "''"
+    # One UAC prompt, and no script on disk: the elevated window receives the
     # fixed command as -EncodedCommand (UTF-16LE base64) and stays open when the
     # enable step fails, so its sentence can be read.
     $quoted = $binary -replace "'", "''"
-    $command = "& '$quoted' windows-sshd enable; if (`$LASTEXITCODE -ne 0) { Read-Host 'Press Enter to close this window.' }"
+    $command = @"
+`$ErrorActionPreference = 'Stop'
+`$log = '$logQuoted'
+`$failed = `$false
+try {
+  & '$quoted' windows-sshd enable *>> `$log
+  if (`$LASTEXITCODE -ne 0) { throw 'OpenSSH Server could not be turned on.' }
+} catch {
+  `$_ | Out-File -LiteralPath `$log -Append -Encoding UTF8
+  Write-Host `$_.Exception.Message -ForegroundColor Red
+  `$failed = `$true
+}
+if (`$failed) {
+  Add-Content -LiteralPath `$log -Value 'shinphony_elevated=failed'
+  Read-Host 'Press Enter to close this window.'
+}
+"@
     $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command))
     try {
-      $process = Start-Process -FilePath 'powershell.exe' -Verb RunAs -PassThru -Wait `
-        -ArgumentList @('-NoProfile', '-EncodedCommand', $encoded)
-      if ($process.ExitCode -ne 0) {
-        Write-Host 'OpenSSH Server could not be turned on.' -ForegroundColor Red
-      }
+      Start-Process -FilePath 'powershell.exe' -Verb RunAs -Wait -ArgumentList @('-NoProfile', '-EncodedCommand', $encoded) | Out-Null
     } catch {
+      Remove-Item -LiteralPath $log -Force -ErrorAction SilentlyContinue
+      Stop-Setup 'Administrator permission was not given, so nothing changed.'
+    }
+    $report = ''
+    if (Test-Path -LiteralPath $log) { $report = [System.IO.File]::ReadAllText($log) }
+    Remove-Item -LiteralPath $log -Force -ErrorAction SilentlyContinue
+    if ($report.Contains('shinphony_elevated=failed')) {
+      Write-Host 'What the administrator window reported:' -ForegroundColor Red
+      Write-Host $report
+      Stop-Setup 'OpenSSH Server could not be turned on. Run this again from a normal PowerShell window.'
+    }
+    if (-not $report) {
       Stop-Setup 'Administrator permission was not given, so nothing changed.'
     }
     $status = Get-SSHDStatus

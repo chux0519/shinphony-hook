@@ -27,10 +27,11 @@ const windowsSSHDRuleName = "OpenSSH-Server-In-TCP"
 var windowsSSHDCapability = "OpenSSH.Server~~~~" + strings.Join([]string{"0", "0", "1", "0"}, ".")
 
 const (
-	errWindowsSSHDUsage  = "usage: windows-sshd status | enable"
-	errWindowsSSHDAdmin  = "Turning on OpenSSH Server needs administrator permission. Open the installer with Run as administrator, then run this again."
-	errWindowsSSHDUpdate = "Could not download OpenSSH Server from Windows Update. Turn it on in Settings > System > Optional features, then run this again."
-	errWindowsSSHDFailed = "Could not turn on OpenSSH Server. Check that the OpenSSH Server optional feature is available on this computer, then run this again."
+	errWindowsSSHDUsage   = "usage: windows-sshd status | enable | prepare-keys"
+	errWindowsSSHDAdmin   = "Turning on OpenSSH Server needs administrator permission. Open the installer with Run as administrator, then run this again."
+	errWindowsSSHDUpdate  = "Could not download OpenSSH Server from Windows Update. Turn it on in Settings > System > Optional features, then run this again."
+	errWindowsSSHDFailed  = "Could not turn on OpenSSH Server. Check that the OpenSSH Server optional feature is available on this computer, then run this again."
+	errWindowsSSHDPrepare = "Could not prepare the administrator key file. Run this again from an administrator PowerShell window."
 )
 
 type windowsSSHDFirewall struct {
@@ -58,6 +59,8 @@ func windowsSSHDCLI(args []string, output io.Writer) error {
 		return windowsSSHDStatusCLI(output)
 	case "enable":
 		return windowsSSHDEnable(output)
+	case "prepare-keys":
+		return windowsSSHDPrepareKeys(output)
 	}
 	return errors.New(errWindowsSSHDUsage)
 }
@@ -149,6 +152,33 @@ func windowsSSHDEnable(output io.Writer) error {
 	// One line, naming the profile: the firewall stays on the profile Windows
 	// chose (on a fresh install that is Private).
 	_, err = io.WriteString(output, "OpenSSH Server is running; the "+windowsSSHDRuleName+" firewall rule is enabled for the "+profile+" profile.\n")
+	return err
+}
+
+// windowsSSHDPrepareKeys creates administrators_authorized_keys with the ACL
+// sshd requires, so the pairing's later elevated key install is one small write.
+// It changes no key material and is idempotent.
+func windowsSSHDPrepareKeys(output io.Writer) error {
+	if !windowsIsElevated() {
+		return errors.New(errWindowsSSHDAdmin)
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return errors.New("keys_home_unavailable")
+	}
+	// A standard account's key never goes to ProgramData\ssh, so there is
+	// nothing privileged to prepare and nothing is created.
+	if !windowsIsAdministrator() {
+		_, err = io.WriteString(output, "This account's key does not need administrator permission.\n")
+		return err
+	}
+	if err = windowsPrepareAdminKeyFile(home); err != nil {
+		if errors.Is(err, errSSHPairNeedsAdmin) {
+			return errors.New(errWindowsSSHDAdmin)
+		}
+		return errors.New(errWindowsSSHDPrepare)
+	}
+	_, err = io.WriteString(output, "administrators_authorized_keys is ready for pairing.\n")
 	return err
 }
 

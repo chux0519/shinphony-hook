@@ -209,12 +209,19 @@ export function activityState(event, agg = event.aggregate) {
 // opaque hostRef. The widget resolves the host's name from its own App Group,
 // so no title and no terminal lines ever reach the relay. `status`/`updatedAt`
 // are the names the current widget decodes; `state`/`startedAt` are the same
-// values under the plan's names.
+// values under the plan's names. `eventId` and `route` are additive: the tap
+// opens the route with the host's key, and a widget that predates it ignores
+// both.
 export function privateActivityContent(event, timestamp, agg = event.aggregate) {
   const created = Number(event.created);
   const state = activityState(event, agg);
+  let route;
+  if (event.route_json) {
+    try { route = JSON.parse(event.route_json); } catch { route = undefined; }
+  }
   return { status: state, state, hostRef: event.host_ref,
-    startedAt: Math.floor((created > 0 ? created : timestamp * 1000) / 1000), updatedAt: timestamp };
+    startedAt: Math.floor((created > 0 ? created : timestamp * 1000) / 1000), updatedAt: timestamp,
+    ...(event.event_id ? { eventId: event.event_id } : {}), ...(route ? { route } : {}) };
 }
 
 export function activityContent(event, timestamp, agg = event.aggregate) {

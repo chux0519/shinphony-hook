@@ -10,12 +10,19 @@
   "ephemeralPublicKey": "8aID3Y228vkvg1jeuLBeVCWqtYvmyZX5B-KytOduvzI",
   "ephemeralPrivateKey": "5bnPpx_2P4_GMyEnsVGcZpyVwMfG3DH661A2RXu0IOc",
   "nonce": "z0B00uxFT1HPLcIw",
-  "plaintextJSON": "{\"category\":\"approval_required\",\"agent\":\"claude\",\"session\":\"0123456789abcdef0123456789abcdef\",\"title\":\"Allow Bash?\",\"body\":\"npm test -- --watch=false\",\"project\":\"hook\",\"visibility\":\"banner\",\"lines\":[\"$ npm test\",\"61 passing\",\"Done in 12.4s\"]}",
+  "plaintextJSON": "{\"category\":\"approval_required\",\"agent\":\"claude\",\"session\":\"0123456789abcdef0123456789abcdef\",\"title\":\"Allow Bash?\",\"body\":\"npm test -- --watch=false\",\"project\":\"hook\",\"visibility\":\"banner\",\"lines\":[\"$ npm test\",\"61 passing\",\"Done in 12.4s\"],\"route\":{\"version\":1,\"agent\":\"codex\",\"thread\":\"0123456789abcdef0123456789abcdef\",\"title\":\"Fix the tap route\",\"multiplexer\":\"tmux\",\"session\":\"hook\",\"window\":\"0\",\"route\":\"evt-01\",\"binary\":\"abababababababababababababababababababababababababababababababab\"}}",
   "envelope": {
     "v": 1,
     "epk": "8aID3Y228vkvg1jeuLBeVCWqtYvmyZX5B-KytOduvzI",
     "n": "z0B00uxFT1HPLcIw",
-    "ct": "60AlR6btXKIN5clmbSXtkO-T18PoHcSr6w53YEMB_JAZvjVekKl8it69v3AG3tT7gilvA_462KaLSI0hoxKMWOpjTACs6_ckvSYIyARSbPT8_f21NdZv70UlP9G4HjqvgkdAIIPM6raTYH8h7zSTrEzsUSRGsQ9bSYG4ovJTOjl1dTCZEsGyNGngXzSiP8dz-xXwW3tpcDwVkmfzb3qsBoG3S2wMhEx9VVPhNn32AI7jTVftAWWQaFrXRjzYmToa4GC4YLSoediSoFzmwf-NGHy5ouY1r5aP-YdaOgdMh9mosN9hCTFy3u_MVkQ9mlAGXCYr9GirNNpXwPXLzuBGoH-s"
+    "ct": "60AlR6btXKIN5clmbSXtkO-T18PoHcSr6w53YEMB_JAZvjVekKl8it69v3AG3tT7gilvA_462KaLSI0hoxKMWOpjTACs6_ckvSYIyARSbPT8_f21NdZv70UlP9G4HjqvgkdAIIPM6raTYH8h7zSTrEzsUSRGsQ9bSYG4ovJTOjl1dTCZEsGyNGngXzSiP8dz-xXwW3tpcDwVkmfzb3qsBoG3S2wMhEx9VVPhNn32AI7jTVftAWWQaFrXRjzYmToa4GC4YLSoediSoFzmwf-NGHy5ouY1r5aP-YdaOgdMh9mosN9hCTFy3u_MVkQ9mlAGXHdJwyzhXi6VioLtQp39Sj6PtZ4lR_13Y3FWIh8CDZVw2mv8yLJTYYBRIHUrQkerMiVMw4zyoBeAyx1dcklpHeOeGxleJ2Flb8U8KyJM7v41kak8wd_fRw6PNdfKfDUKu5BDjs0UwvR5Q1Sb36L_HWj6BpfIBxHKMqGaFKbemv27bBkqyNbBzBw7ERbyqVKFMWonBePdmKLdgCmtXKaW90YrwevBd6k2P_iijXZqvPOoV331I1Gj2WCcNyTxhWYunPdHtukbbwGxLmjNJ42tcuTvM6DZ58h5tV3VIM5loyfjQjKnvhbT_v-kpkbCl6Wl7ic2cMvMQd_DaJoJg4hgWkrPWNoo9ISeKGA31649OpQ"
   },
-  "notes": "Fixed test keys and nonce; derived from SHA-256 of their labels. Never use them for a real pairing."
+  "routePlaintextJSON": "{\"version\":1,\"agent\":\"codex\",\"thread\":\"0123456789abcdef0123456789abcdef\",\"title\":\"Fix the tap route\",\"multiplexer\":\"tmux\",\"session\":\"hook\",\"window\":\"0\",\"route\":\"evt-01\",\"binary\":\"abababababababababababababababababababababababababababababababab\"}",
+  "routeEnvelope": {
+    "v": 1,
+    "epk": "vcRZ2-kz9fSitTo4sThyU3yPoIyVcrL-6eNFWEiNGjU",
+    "n": "QXxGy1qToRka4-f8",
+    "ct": "QQXZEmYOaedqHEMyBrQK0TWR2vWU9PP5RQvKVB3wP4g3SdraECp7ncu_xjV_7WkeUtS-7vSs-NU6TGvG3Bz2hULMR7u1KzCydj8w3KbS7Eow4-RNIU8Mx8oYKX_8H4ubJjxc6S23aVBvwT9Y4OtE_GLHSiAKLQsVVrcoRy8_P9pj972CXTf6D3fk6GRTCuwODu1GOborSYwhmW3brSBS10elztxq_yfmVqvbedChLAz1vVzMBCOdy4IH77ol39A6QJHdcYFAO5fDD1YxpIjzr3fWmuc6eLILUc3__1TJwO12gAwvqbmj_TICWTA4kw9qq7SMUtrHCiVywkNAq2-jiKU13-8x"
+  },
+  "notes": "Fixed test keys and nonce; derived from SHA-256 of their labels. Never use them for a real pairing. routeEnvelope is the Live Activity's tap route, sealed separately under the same hostRef."
 }

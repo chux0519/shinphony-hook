@@ -3,19 +3,24 @@
 package main
 
 // The Windows side of `pair`: the console (CONIN$/CONOUT$) for the prompts and
-// the QR, the sshd host public keys on disk instead of ssh-keyscan, and no root
-// rule (Windows elevates per action, and only the administrator key file needs
-// it). The flow itself is in ssh_pair_cli.go.
+// the QR, the sshd host public keys on disk (with the OpenSSH client's
+// ssh-keyscan as the fallback when a filtered administrator token may not read
+// ProgramData\ssh), and no root rule (Windows elevates per action, and only the
+// administrator key file needs it). The flow itself is in ssh_pair_cli.go.
 
 import (
 	"bufio"
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 	"unicode/utf16"
 
 	"golang.org/x/sys/windows"
@@ -124,8 +129,11 @@ func writeConsoleW(handle windows.Handle, text string) error {
 }
 
 // localSSHPins computes the SHA256 fingerprints of the host public keys sshd
-// generated, i.e. the same values ssh-keyscan would report on Unix.
-func localSSHPins(_ int) ([]string, error) {
+// generated, i.e. the same values ssh-keyscan would report on Unix. The files
+// are the fast path, but ProgramData\ssh is readable only by an elevated
+// token, so an administrator's normal window falls back to asking the local
+// sshd with the OpenSSH client's ssh-keyscan, which yields the same pins.
+func localSSHPins(port int) ([]string, error) {
 	dir := sshdConfigDirectory()
 	pins := []string{}
 	seen := map[string]bool{}
@@ -149,8 +157,39 @@ func localSSHPins(_ int) ([]string, error) {
 			seen[pin] = true
 		}
 	}
-	if len(pins) == 0 || len(pins) > 4 {
+	if len(pins) > 0 && len(pins) <= 4 {
+		return pins, nil
+	}
+	return sshKeyscanPins(port)
+}
+
+// sshKeyscanBinary is the Windows OpenSSH client's scanner: PATH first, then
+// the path the optional OpenSSH Client feature installs to.
+func sshKeyscanBinary() string {
+	if path, err := exec.LookPath("ssh-keyscan.exe"); err == nil {
+		return path
+	}
+	if root := os.Getenv("SystemRoot"); root != "" {
+		candidate := filepath.Join(root, "System32", "OpenSSH", "ssh-keyscan.exe")
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+	}
+	return ""
+}
+
+// sshKeyscanPins is the fallback for a token that may not read the host key
+// files. It never runs on a machine without the OpenSSH client.
+func sshKeyscanPins(port int) ([]string, error) {
+	binary := sshKeyscanBinary()
+	if binary == "" {
 		return nil, errors.New("ssh_pair_local_ssh_unavailable")
 	}
-	return pins, nil
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	output, err := exec.CommandContext(ctx, binary, "-T", "3", "-p", fmt.Sprint(port), "-t", "ed25519,ecdsa,rsa", "127.0.0.1").Output()
+	if err != nil || len(output) > 16384 {
+		return nil, errors.New("ssh_pair_local_ssh_unavailable")
+	}
+	return sshPinsFromKeyscanOutput(output)
 }

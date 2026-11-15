@@ -61,7 +61,7 @@ func TestWindowsSSHDStatusJSONKeys(t *testing.T) {
 
 func TestWindowsSSHDCLIRejectsUsage(t *testing.T) {
 	var out bytes.Buffer
-	for _, args := range [][]string{nil, {}, {"start"}, {"status", "extra"}, {"--help"}} {
+	for _, args := range [][]string{nil, {}, {"start"}, {"prepare"}, {"status", "extra"}, {"prepare-keys", "extra"}, {"--help"}} {
 		if err := windowsSSHDCLI(args, &out); err == nil || !strings.Contains(err.Error(), "usage: windows-sshd") {
 			t.Fatalf("windowsSSHDCLI(%v) = %v, want the usage sentence", args, err)
 		}
@@ -96,5 +96,22 @@ func TestWindowsSSHDEnableNeedsElevation(t *testing.T) {
 	}
 	if before.Installed != after.Installed || before.Running != after.Running || before.StartType != after.StartType {
 		t.Fatal("a refused enable changed the sshd service")
+	}
+}
+
+// prepare-keys only creates the shared administrator key file, which needs
+// administrator rights. A normal run says so and creates nothing, so a broken
+// elevation can never leave a file in ProgramData with the wrong owner.
+func TestWindowsSSHDPrepareKeysNeedsElevation(t *testing.T) {
+	if windowsIsElevated() {
+		t.Skip("elevated runs may create ProgramData\\ssh\\administrators_authorized_keys")
+	}
+	var out bytes.Buffer
+	err := windowsSSHDCLI([]string{"prepare-keys"}, &out)
+	if err == nil || !strings.Contains(err.Error(), "administrator permission") {
+		t.Fatalf("prepare-keys without elevation = %v, want the administrator sentence", err)
+	}
+	if out.Len() != 0 {
+		t.Fatal("a refused prepare-keys must not print a line")
 	}
 }

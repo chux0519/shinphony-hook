@@ -56,8 +56,19 @@ to the paired phone.
   `liveActivityLines` choice decides between the state, time and `hostRef` only
   (off, the default) and today's plaintext title and terminal lines for the
   Live Activity alone (on). Notifications stay sealed either way.
+- A tap has to land on the right session, and the route says who runs what and
+  where: multiplexer, session, the agent's thread, this event's id and the
+  terminal binary's digest. In private mode it is sealed twice — inside the
+  notification's envelope as `route`, so a notification tap can resolve it, and
+  on its own as `routeE2E` (at most 600 bytes) for the Live Activity, whose
+  content state stays under Apple's 4 KB limit. The relay copies that small
+  envelope into the Live Activity content state as `route` next to the
+  (random) `eventId` and stores it only until the push is delivered. It never
+  carries terminal text: the route is trimmed of display fields to fit, the
+  routing fields stay.
 - `testdata/e2e_vectors.json` holds fixed test keys and a nonce so the Go and
-  Swift sides are checked against the same bytes. They are test-only.
+  Swift sides are checked against the same bytes, for the notification
+  envelope and the route envelope. They are test-only.
 
 ## Services
 

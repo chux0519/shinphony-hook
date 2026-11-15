@@ -32,25 +32,37 @@ export function agentDetails(body) {
 // receives the category, an opaque hostRef and a sealed envelope that it only
 // passes through to APNs. The envelope is bounded so one event stays one push.
 export const e2eMaxEnvelope = 2800;
+// The tap route is sealed on its own and rides in the Live Activity's content
+// state, next to the state itself: a much smaller bound.
+export const e2eMaxRouteEnvelope = 600;
 const e2eKeys = ['v', 'epk', 'n', 'ct'];
 const base64url = /^[A-Za-z0-9_-]+$/;
+// One envelope shape, one bound: `limit` is the largest JSON form accepted.
+const envelope = (value, limit) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(key => !e2eKeys.includes(key)) ||
+      value.v !== 1 || e2eKeys.slice(1).some(key => typeof value[key] !== 'string' || value[key].length > 4096 || !base64url.test(value[key]))) {
+    throw new Error('invalid_e2e');
+  }
+  const epk = Buffer.from(value.epk, 'base64url'), nonce = Buffer.from(value.n, 'base64url'), sealed = Buffer.from(value.ct, 'base64url');
+  if (epk.length !== 32 || nonce.length !== 12 || sealed.length < 17 || sealed.length > 2064) throw new Error('invalid_e2e');
+  if (Buffer.byteLength(JSON.stringify(value)) > limit) throw new Error('e2e_too_large');
+  return value;
+};
 // A pairing's Live Activity choice: true means today's plaintext title and
 // terminal lines travel for the Live Activity only. Notifications stay sealed.
 export const e2ePayload = body => {
-  if (body.e2e === undefined && body.hostRef === undefined && body.silent === undefined && body.liveLines === undefined) return undefined;
+  if (body.e2e === undefined && body.hostRef === undefined && body.silent === undefined &&
+      body.liveLines === undefined && body.routeE2E === undefined) return undefined;
   if (body.category === undefined) throw new Error('invalid_details');
   if (body.e2e === undefined || body.hostRef === undefined) throw new Error('invalid_e2e');
   if (typeof body.hostRef !== 'string' || !/^[A-Za-z0-9_-]{22}$/.test(body.hostRef)) throw new Error('invalid_host_ref');
   for (const flag of ['silent', 'liveLines']) {
     if (body[flag] !== undefined && typeof body[flag] !== 'boolean') throw new Error('invalid_e2e');
   }
-  const e2e = body.e2e;
-  if (!e2e || typeof e2e !== 'object' || Array.isArray(e2e) || Object.keys(e2e).some(key => !e2eKeys.includes(key)) ||
-      e2e.v !== 1 || e2eKeys.slice(1).some(key => typeof e2e[key] !== 'string' || e2e[key].length > 4096 || !base64url.test(e2e[key]))) {
-    throw new Error('invalid_e2e');
-  }
-  const epk = Buffer.from(e2e.epk, 'base64url'), nonce = Buffer.from(e2e.n, 'base64url'), sealed = Buffer.from(e2e.ct, 'base64url');
-  if (epk.length !== 32 || nonce.length !== 12 || sealed.length < 17 || sealed.length > 2064) throw new Error('invalid_e2e');
-  if (Buffer.byteLength(JSON.stringify(e2e)) > e2eMaxEnvelope) throw new Error('e2e_too_large');
-  return { e2e, hostRef: body.hostRef, silent: body.silent === true, liveLines: body.liveLines === true };
+  const e2e = envelope(body.e2e, e2eMaxEnvelope);
+  // Optional: a tap route the Live Activity can open. Absent when the event has
+  // no context, or when the Hook could not seal it.
+  const route = body.routeE2E === undefined ? undefined : envelope(body.routeE2E, e2eMaxRouteEnvelope);
+  return { e2e, hostRef: body.hostRef, silent: body.silent === true, liveLines: body.liveLines === true,
+    ...(route ? { route } : {}) };
 };

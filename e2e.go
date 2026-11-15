@@ -25,8 +25,11 @@ const (
 	e2eHostRefDo = "shinphony-hostref-v1"
 	// The relay rejects a larger envelope; the sender trims until it fits.
 	e2eMaxEnvelope = 2800
-	e2eKeyBytes    = 32
-	e2eNonceBytes  = 12
+	// The tap route travels in the Live Activity's content state, next to the
+	// state and the hostRef, so it has a much smaller bound of its own.
+	e2eMaxRouteEnvelope = 600
+	e2eKeyBytes         = 32
+	e2eNonceBytes       = 12
 	// Lines are the terminal preview the Live Activity shows. Bounded like the
 	// context projection that carries them today.
 	e2eMaxLines     = 6
@@ -140,6 +143,10 @@ type e2ePlaintext struct {
 	Project    string   `json:"project,omitempty"`
 	Visibility string   `json:"visibility,omitempty"`
 	Lines      []string `json:"lines,omitempty"`
+	// Route is the tap route: the same projection the plaintext `context`
+	// carries, whose own `route` is this event's ID. It has no terminal preview:
+	// a route says who runs what and where, the conversation text stays in Lines.
+	Route *taskContext `json:"route,omitempty"`
 }
 
 func halfRunes(s string) string {
@@ -169,7 +176,8 @@ func (p *e2ePlaintext) trim() bool {
 	}
 	switch {
 	case longest < 0:
-		return false
+		// The text is gone; the route is the last thing that can shrink.
+		return trimRoute(p.Route)
 	case longest == len(fields):
 		if len(p.Lines) == 1 {
 			if p.Lines[0] = halfRunes(p.Lines[0]); p.Lines[0] == "" {
@@ -182,6 +190,53 @@ func (p *e2ePlaintext) trim() bool {
 	default:
 		*fields[longest] = halfRunes(*fields[longest])
 		return true
+	}
+}
+
+// trimRoute shortens what a tap can live without, in order: the display title,
+// then the window, then the hc conversation labels. The routing fields
+// (version, agent, thread, multiplexer, session, route, binary) never leave, so
+// a trimmed route still opens the right session.
+func trimRoute(r *taskContext) bool {
+	if r == nil {
+		return false
+	}
+	if title := halfRunes(r.Title); title != r.Title {
+		r.Title = title
+		return true
+	}
+	for _, field := range []*string{&r.Window, &r.ParentTitle, &r.Space, &r.Parent} {
+		if *field != "" {
+			*field = ""
+			return true
+		}
+	}
+	return false
+}
+
+// e2eSealRoute seals the tap route on its own, inside the smaller bound the
+// Live Activity has. It trims display fields until it fits; the routing fields
+// alone always do.
+func e2eSealRoute(seal func([]byte) (e2eEnvelope, error), route *taskContext) (e2eEnvelope, error) {
+	for {
+		raw, err := json.Marshal(route)
+		if err != nil {
+			return e2eEnvelope{}, errors.New("e2e_route_invalid")
+		}
+		envelope, err := seal(raw)
+		if err != nil {
+			return e2eEnvelope{}, err
+		}
+		body, err := json.Marshal(envelope)
+		if err != nil {
+			return e2eEnvelope{}, errors.New("e2e_envelope_invalid")
+		}
+		if len(body) <= e2eMaxRouteEnvelope {
+			return envelope, nil
+		}
+		if !trimRoute(route) {
+			return e2eEnvelope{}, errors.New("e2e_route_too_large")
+		}
 	}
 }
 
@@ -251,21 +306,40 @@ func e2eFields(rnd io.Reader, phonePub []byte, hostRef string, details *eventDet
 		Title: details.Title, Body: details.Body, Project: details.Project,
 		Visibility: details.Visibility,
 	}
+	seal := func(plaintext []byte) (e2eEnvelope, error) {
+		return e2eSeal(rnd, phonePub, hostRef, plaintext)
+	}
+	var route *taskContext
+	var routeEnvelope e2eEnvelope
+	hasRoute := false
 	if context != nil {
+		// The tap resolves the same projection, never the preview. It is bounded
+		// for the Live Activity first, so both envelopes carry the same route.
+		tap := *context
+		tap.Preview = ""
+		route = &tap
+		if sealed, err := e2eSealRoute(seal, route); err == nil {
+			routeEnvelope, hasRoute = sealed, true
+		}
+		p.Route = route
 		p.Lines = e2ePreviewLines(context.Preview)
 	}
-	envelope, err := e2eSealPlaintext(func(plaintext []byte) (e2eEnvelope, error) {
-		return e2eSeal(rnd, phonePub, hostRef, plaintext)
-	}, p)
+	envelope, err := e2eSealPlaintext(seal, p)
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{
+	fields := map[string]any{
 		"category": p.Category,
 		"hostRef":  hostRef,
 		"e2e":      envelope,
 		"silent":   p.Visibility == "silent",
-	}, nil
+	}
+	// A separate envelope for the Live Activity. A route that cannot be sealed
+	// is left out rather than dropping the notification.
+	if hasRoute {
+		fields["routeE2E"] = routeEnvelope
+	}
+	return fields, nil
 }
 
 // randomReader is the production randomness for sealing.

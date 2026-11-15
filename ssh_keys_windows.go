@@ -27,6 +27,12 @@ import (
 // SYSTEM only, inherited ACEs dropped.
 const windowsKeyRequiredSDDL = "O:BAD:P(A;OICI;FA;;;BA)(A;OICI;FA;;;SY)"
 
+// errSSHPairNeedsAdmin is the one reason pairing raises a second UAC prompt: an
+// administrator's key file lives in ProgramData\ssh and only an elevated
+// process may write it. It is a sentinel so `pair` can tell this refusal apart
+// from a real failure instead of matching the message.
+var errSSHPairNeedsAdmin = errors.New("ssh_pair_needs_admin")
+
 // sshKeyStat is Windows' file identity: the volume and file index, so a replace
 // between read and write is detected.
 type sshKeyStat struct {
@@ -256,7 +262,7 @@ func openSSHKeyStore(home string, create bool) (sshKeyStore, error) {
 	// administrators_authorized_keys lives in ProgramData\ssh, which a
 	// non-elevated administrator token can neither read nor write.
 	if admin && !windowsIsElevated() {
-		return nil, errors.New("ssh_pair_needs_admin")
+		return nil, errSSHPairNeedsAdmin
 	}
 	_, statErr := os.Stat(dir)
 	switch {
@@ -336,7 +342,7 @@ func windowsPrepareKeyDirectory(dir string, admin bool) error {
 	_, existing := os.Stat(dir)
 	if err = windows.CreateDirectory(p, sa); err != nil && !errors.Is(err, windows.ERROR_ALREADY_EXISTS) {
 		if errors.Is(err, windows.ERROR_ACCESS_DENIED) {
-			return errors.New("ssh_pair_needs_admin")
+			return errSSHPairNeedsAdmin
 		}
 		return errors.New("keys_directory_create_failed")
 	}
@@ -389,7 +395,7 @@ func (s *windowsSSHKeyStore) read(name string) (sshKeySnapshot, error) {
 		windows.OPEN_EXISTING, windows.FILE_ATTRIBUTE_NORMAL|windows.FILE_FLAG_OPEN_REPARSE_POINT, 0)
 	if err != nil {
 		if errors.Is(err, windows.ERROR_ACCESS_DENIED) {
-			return sshKeySnapshot{}, errors.New("ssh_pair_needs_admin")
+			return sshKeySnapshot{}, errSSHPairNeedsAdmin
 		}
 		return sshKeySnapshot{}, errors.New("keys_unsafe_file")
 	}
@@ -433,7 +439,7 @@ func (s *windowsSSHKeyStore) write(name string, data []byte, expected sshKeySnap
 		return errors.New("keys_file_too_large")
 	}
 	if s.admin && !s.elevated {
-		return errors.New("ssh_pair_needs_admin")
+		return errSSHPairNeedsAdmin
 	}
 	// An existing administrators_authorized_keys keeps its ACL unless it is
 	// looser than sshd allows; then it is narrowed to Administrators and SYSTEM
@@ -460,7 +466,7 @@ func (s *windowsSSHKeyStore) write(name string, data []byte, expected sshKeySnap
 		windows.FILE_SHARE_READ, sa, windows.CREATE_NEW, windows.FILE_ATTRIBUTE_NORMAL, 0)
 	if err != nil {
 		if errors.Is(err, windows.ERROR_ACCESS_DENIED) {
-			return errors.New("ssh_pair_needs_admin")
+			return errSSHPairNeedsAdmin
 		}
 		return errors.New("keys_write_failed")
 	}
@@ -525,6 +531,71 @@ func (s *windowsSSHKeyStore) restrictAdminKeyACL(name string) error {
 	return nil
 }
 
+// windowsPrepareAdminKeyFile makes administrators_authorized_keys exist with the
+// ACL sshd requires, without touching its content: it creates the file (and its
+// ProgramData\ssh directory) when missing, and re-states the exact ACL
+// otherwise. The elevated pairing window calls it before the key is approved, so
+// the later, short elevated `keys install` only has to replace the key file.
+func windowsPrepareAdminKeyFile(home string) error {
+	store, err := openSSHKeyStore(home, true)
+	if err != nil {
+		return err
+	}
+	defer store.close()
+	keys, ok := store.(*windowsSSHKeyStore)
+	if !ok || !keys.admin {
+		return errors.New("keys_prepare_unavailable")
+	}
+	unlock, err := store.lock()
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	path := filepath.Join(keys.dir, keys.keysFile)
+	_, statErr := os.Lstat(path)
+	switch {
+	case errors.Is(statErr, os.ErrNotExist):
+		if err = windowsCreateAdminKeyFile(path); err != nil {
+			return err
+		}
+	case statErr != nil:
+		return errors.New("keys_unsafe_file")
+	default:
+		// An existing file is only re-ACLed when it is the regular file it
+		// looks like, never a link to somewhere else.
+		if err = noReparse(path); err != nil {
+			return errors.New("keys_unsafe_file")
+		}
+	}
+	return windowsAdminKeyACLs(path)
+}
+
+// windowsCreateAdminKeyFile creates the empty administrator key file with the
+// required owner and ACL in one call, so it never exists with a looser one.
+func windowsCreateAdminKeyFile(path string) error {
+	sa, err := windowsAdminSecurityAttributes()
+	if err != nil {
+		return errors.New("keys_write_failed")
+	}
+	p, err := windows.UTF16PtrFromString(path)
+	if err != nil {
+		return errors.New("keys_write_failed")
+	}
+	handle, err := windows.CreateFile(p, windows.GENERIC_READ|windows.GENERIC_WRITE,
+		windows.FILE_SHARE_READ, sa, windows.CREATE_NEW, windows.FILE_ATTRIBUTE_NORMAL, 0)
+	if err != nil {
+		if errors.Is(err, windows.ERROR_ACCESS_DENIED) {
+			return errSSHPairNeedsAdmin
+		}
+		if errors.Is(err, windows.ERROR_FILE_EXISTS) || errors.Is(err, windows.ERROR_ALREADY_EXISTS) {
+			// Something created it in between; the caller re-states the ACL next.
+			return nil
+		}
+		return errors.New("keys_write_failed")
+	}
+	return windows.CloseHandle(handle)
+}
+
 // windowsKeyFileAttributes is the creation ACL for a temp file: the
 // Administrators/SYSTEM pair for the shared file, user-only otherwise.
 func windowsKeyFileAttributes(admin bool) (*windows.SecurityAttributes, error) {
@@ -551,7 +622,7 @@ func (s *windowsSSHKeyStore) lock() (func(), error) {
 		windows.FILE_ATTRIBUTE_NORMAL|windows.FILE_FLAG_OPEN_REPARSE_POINT, 0)
 	if err != nil {
 		if errors.Is(err, windows.ERROR_ACCESS_DENIED) {
-			return nil, errors.New("ssh_pair_needs_admin")
+			return nil, errSSHPairNeedsAdmin
 		}
 		return nil, errors.New("keys_lock_failed")
 	}

@@ -320,3 +320,24 @@ func TestWindowsKeyJournalIsNotCreatedByListOrPreview(t *testing.T) {
 		t.Fatalf("list or preview created files: %v", err)
 	}
 }
+
+// Preparing the shared administrator key file writes ProgramData\ssh, so a
+// non-elevated run refuses with the one code `pair` knows how to elevate for,
+// and creates nothing - in ProgramData or in the profile.
+func TestWindowsPrepareAdminKeyFileNeedsElevation(t *testing.T) {
+	if windowsIsElevated() {
+		t.Skip("elevated runs may create administrators_authorized_keys")
+	}
+	dir := t.TempDir()
+	previous := sshKeyStoreTarget
+	sshKeyStoreTarget = func(string) (string, string, bool) {
+		return dir, "administrators_authorized_keys", true
+	}
+	t.Cleanup(func() { sshKeyStoreTarget = previous })
+	if err := windowsPrepareAdminKeyFile(t.TempDir()); !errors.Is(err, errSSHPairNeedsAdmin) {
+		t.Fatalf("prepare without elevation = %v, want ssh_pair_needs_admin", err)
+	}
+	if entries, err := os.ReadDir(dir); err != nil || len(entries) != 0 {
+		t.Fatalf("prepare without elevation created files: %v", err)
+	}
+}

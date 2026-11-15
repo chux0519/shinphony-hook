@@ -89,6 +89,28 @@ func TestDeliverySealsPrivateNotifications(t *testing.T) {
 		strings.Join(plain.Lines, "|") != "npm test|61 passing" || plain.Visibility != "banner" {
 		t.Fatalf("%+v", plain)
 	}
+	// The tap route is sealed with the details and again on its own, so a
+	// notification tap and a Live Activity tap resolve the same session.
+	if plain.Route == nil || plain.Route.Route != "event" || plain.Route.Session != "shinphony" ||
+		plain.Route.Thread != "t1" || plain.Route.Multiplexer != "tmux" || plain.Route.Preview != "" {
+		t.Fatalf("route: %+v", plain.Route)
+	}
+	routeRaw, err := json.Marshal(got["routeE2E"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	var routeEnvelope e2eEnvelope
+	if err = json.Unmarshal(routeRaw, &routeEnvelope); err != nil || len(routeRaw) > e2eMaxRouteEnvelope {
+		t.Fatal(len(routeRaw), err)
+	}
+	openedRoute, err := e2eOpen(vectorKey(t, "phone"), routeEnvelope, e2eHostRef("phone"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var route taskContext
+	if err = json.Unmarshal(openedRoute, &route); err != nil || route.Route != "event" || route.Thread != "t1" {
+		t.Fatal(route, err)
+	}
 }
 
 // Opting in to plaintext Live Activity lines sends today's title, body and
@@ -138,6 +160,10 @@ func TestDeliverySilentPrivateEvent(t *testing.T) {
 	}
 	if got["silent"] != true {
 		t.Fatal(got)
+	}
+	// No context: nothing to route to, so no second envelope either.
+	if _, ok := got["routeE2E"]; ok {
+		t.Fatal("routeE2E without a context")
 	}
 }
 

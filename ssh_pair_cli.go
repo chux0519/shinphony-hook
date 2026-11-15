@@ -106,6 +106,34 @@ func validSSHPairAddress(value string) bool {
 	return len(value) >= 1 && len(value) <= 253 && !strings.ContainsAny(value, "\r\n\x00 /@")
 }
 
+// sshPinsFromKeyscanOutput turns ssh-keyscan's `host keytype base64` lines into
+// the SHA256 fingerprints the App compares. Shared, so the Windows fallback
+// reports exactly what the Unix scan reports.
+func sshPinsFromKeyscanOutput(output []byte) ([]string, error) {
+	pins := []string{}
+	seen := map[string]bool{}
+	for _, line := range strings.Split(string(output), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) != 3 {
+			continue
+		}
+		blob, err := base64.StdEncoding.Strict().DecodeString(fields[2])
+		if err != nil || len(blob) > 8192 {
+			continue
+		}
+		hash := sha256.Sum256(blob)
+		pin := "SHA256:" + base64.RawStdEncoding.EncodeToString(hash[:])
+		if !seen[pin] {
+			pins = append(pins, pin)
+			seen[pin] = true
+		}
+	}
+	if len(pins) == 0 || len(pins) > 4 {
+		return nil, errors.New("ssh_pair_local_ssh_unavailable")
+	}
+	return pins, nil
+}
+
 // recordSSHPairIntent writes the App hand-off file only when notifications were
 // requested. It is called after the key install and before the receipt, so the
 // App can read it as soon as the receipt arrives.
@@ -384,7 +412,7 @@ func sshPairCLI(args []string, input io.Reader, output io.Writer) error {
 			if err != nil {
 				return errors.New("keys_home_unavailable")
 			}
-			if _, err = manageSSHKey(home, "install", request); err != nil {
+			if err = installSSHPairKey(home, request); err != nil {
 				return err
 			}
 			receipt, err := invitation.seal("receipt", request.ID, sshPairHash(mailbox.Key.Payload), "installed")

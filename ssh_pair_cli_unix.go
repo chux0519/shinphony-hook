@@ -9,13 +9,10 @@ package main
 import (
 	"bufio"
 	"context"
-	"crypto/sha256"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 )
 
@@ -41,6 +38,13 @@ func openSSHPairConsole() (*sshPairConsole, error) {
 	}, nil
 }
 
+// installSSHPairKey installs the key the phone approved. Unix never needs
+// elevation for this, so the shared installer is the whole implementation.
+func installSSHPairKey(home string, request sshKeyRequest) error {
+	_, err := manageSSHKey(home, "install", request)
+	return err
+}
+
 func localSSHPins(port int) ([]string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -48,26 +52,5 @@ func localSSHPins(port int) ([]string, error) {
 	if err != nil || len(output) > 16384 {
 		return nil, errors.New("ssh_pair_local_ssh_unavailable")
 	}
-	pins := []string{}
-	seen := map[string]bool{}
-	for _, line := range strings.Split(string(output), "\n") {
-		fields := strings.Fields(line)
-		if len(fields) != 3 {
-			continue
-		}
-		blob, err := base64.StdEncoding.Strict().DecodeString(fields[2])
-		if err != nil || len(blob) > 8192 {
-			continue
-		}
-		hash := sha256.Sum256(blob)
-		pin := "SHA256:" + base64.RawStdEncoding.EncodeToString(hash[:])
-		if !seen[pin] {
-			pins = append(pins, pin)
-			seen[pin] = true
-		}
-	}
-	if len(pins) == 0 || len(pins) > 4 {
-		return nil, errors.New("ssh_pair_local_ssh_unavailable")
-	}
-	return pins, nil
+	return sshPinsFromKeyscanOutput(output)
 }
