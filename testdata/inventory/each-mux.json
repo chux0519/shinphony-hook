@@ -1,0 +1,165 @@
+{
+  "schema": 1,
+  "generatedAt": 1763250000,
+  "host": "",
+  "conversations": [
+    {
+      "id": "c_d8f3667f10b4c7c1",
+      "mux": "hc",
+      "group": {
+        "kind": "hcSpace",
+        "name": "Shinphony"
+      },
+      "title": "claude-main",
+      "directory": "/Users/me/repos/shinphony",
+      "agent": "claude",
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763249800,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "claude",
+        "thread": "",
+        "title": "claude-main",
+        "multiplexer": "hc",
+        "session": "claude-main",
+        "window": "t1",
+        "route": "",
+        "binary": "",
+        "space": "Shinphony"
+      }
+    },
+    {
+      "id": "c_282e6a21a0bff018",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "editor",
+      "directory": "/Users/me/repos/shinphony",
+      "agent": "codex",
+      "state": "working",
+      "stateSource": "mux",
+      "since": 1763249970,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "codex",
+        "thread": "",
+        "title": "editor",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "editor",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_ac6e4d52255a1158",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "logs",
+      "directory": "/var/log",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763242800,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "logs",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "logs",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_8b26e36922d07594",
+      "mux": "zellij",
+      "group": {
+        "kind": "other",
+        "name": ""
+      },
+      "title": "dev",
+      "directory": "",
+      "agent": null,
+      "state": "unknown",
+      "stateSource": "none",
+      "since": 1763250000,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "dev",
+        "multiplexer": "zellij",
+        "session": "dev",
+        "window": "",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_8785a9b4c248c853",
+      "mux": "zellij",
+      "group": {
+        "kind": "other",
+        "name": ""
+      },
+      "title": "ops",
+      "directory": "",
+      "agent": null,
+      "state": "unknown",
+      "stateSource": "none",
+      "since": 1763250000,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "ops",
+        "multiplexer": "zellij",
+        "session": "ops",
+        "window": "",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_7264c56b205eadd4",
+      "mux": "shell",
+      "group": {
+        "kind": "other",
+        "name": ""
+      },
+      "title": "pts-0.host",
+      "directory": "",
+      "agent": null,
+      "state": "unknown",
+      "stateSource": "none",
+      "since": 1763250000,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "pts-0.host",
+        "multiplexer": "shell",
+        "session": "pts-0.host",
+        "window": "",
+        "route": "",
+        "binary": ""
+      }
+    }
+  ],
+  "errors": []
+}

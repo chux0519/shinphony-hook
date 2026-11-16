@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -57,32 +55,12 @@ func deliver(dir string, client *http.Client) sender {
 		if !e.valid() {
 			return result{Code: "invalid_event"}
 		}
-		if err := privatePath(dir, true); err != nil {
-			return result{Code: "credential_unavailable"}
-		}
-		path := filepath.Join(dir, e.Profile+".json")
-		if err := privatePath(path, false); err != nil {
-			return result{Code: "credential_unavailable"}
-		}
-		f, err := os.Open(path)
-		if err != nil {
-			return result{Code: "credential_unavailable"}
-		}
-		defer f.Close()
-		raw, err := io.ReadAll(io.LimitReader(f, 8193))
-		if err != nil || len(raw) > 8192 {
-			return result{Code: "invalid_credential"}
-		}
-		var c credential
-		if json.Unmarshal(raw, &c) != nil || c.Schema != 1 || !identifier.MatchString(c.Host) || len(c.Token) != 43 || !identifier.MatchString(c.Token) {
-			return result{Code: "invalid_credential"}
+		c, code := loadCredential(dir, e.Profile)
+		if code != "" {
+			return result{Code: code}
 		}
 		var phonePub []byte
 		if c.E2E != nil {
-			// A malformed key never falls back to plaintext: it stops delivery.
-			if c.E2E.V != 1 || !validE2EPublicKey(c.E2E.Pub) {
-				return result{Code: "invalid_credential"}
-			}
 			phonePub, _ = e2ePublicKey(c.E2E.Pub)
 		}
 		prefix := ""

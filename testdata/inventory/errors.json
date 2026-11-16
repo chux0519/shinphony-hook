@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "generatedAt": 1763250000,
+  "host": "",
+  "conversations": [],
+  "errors": [
+    "hc_unavailable",
+    "tmux_unavailable"
+  ]
+}

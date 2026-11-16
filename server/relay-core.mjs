@@ -12,6 +12,15 @@ const secret = () => randomBytes(32).toString('base64url');
 const validId = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(value);
 const validToken = value => typeof value === 'string' && /^[a-f0-9]{64,512}$/i.test(value) && value.length % 2 === 0;
 const fail = (status, code) => { throw Object.assign(new Error(code), { status, code }); };
+// A sealed inventory blob: shape only, never opened. Same envelope the Hook
+// produces for private notifications (X25519 + ChaCha20-Poly1305, base64url).
+const inventoryBlobLimit = 24576;
+const validEnvelope = value => !!value && typeof value === 'object' && !Array.isArray(value) &&
+  Object.keys(value).length === 4 && value.v === 1 &&
+  typeof value.epk === 'string' && /^[A-Za-z0-9_-]{43}$/.test(value.epk) &&
+  typeof value.n === 'string' && /^[A-Za-z0-9_-]{16}$/.test(value.n) &&
+  typeof value.ct === 'string' && /^[A-Za-z0-9_-]+$/.test(value.ct);
+const validHostRef = value => typeof value === 'string' && /^[A-Za-z0-9_-]{22}$/.test(value);
 function fields(body, names) {
   if (!body || typeof body !== 'object' || Array.isArray(body) ||
       Object.keys(body).some(key => !names.includes(key))) fail(400, 'invalid_fields');
@@ -43,7 +52,11 @@ export class Relay {
       CREATE INDEX IF NOT EXISTS events_due ON events(state, due);
       CREATE INDEX IF NOT EXISTS events_device_time ON events(device, created);
       CREATE INDEX IF NOT EXISTS events_created ON events(created);
-      CREATE INDEX IF NOT EXISTS events_host_time ON events(host_key, created);`);
+      CREATE INDEX IF NOT EXISTS events_host_time ON events(host_key, created);
+      CREATE TABLE IF NOT EXISTS inventories (
+        host_key TEXT PRIMARY KEY, device TEXT, host TEXT, host_ref TEXT,
+        received INTEGER, envelope TEXT);
+      CREATE INDEX IF NOT EXISTS inventories_device_time ON inventories(device, received);`);
     const columns = this.db.columns('events');
     for (const [name, type] of [['apns_status', 'INTEGER'], ['apns_reason', 'TEXT'], ['context_json', 'TEXT'], ['details_json', 'TEXT'], ['live_only', 'INTEGER'], ['start_json', 'TEXT'], ['e2e_json', 'TEXT'], ['route_json', 'TEXT'], ['host_ref', 'TEXT'], ['live_lines', 'INTEGER']]) {
       if (!columns.includes(name)) this.db.exec(`ALTER TABLE events ADD COLUMN ${name} ${type}`);
@@ -68,6 +81,7 @@ export class Relay {
     // The sealed envelope is kept only until delivery: it is never an archive.
     this.run("UPDATE events SET e2e_json=NULL, route_json=NULL WHERE state!='queued' AND (e2e_json IS NOT NULL OR route_json IS NOT NULL)");
     this.run('DELETE FROM events WHERE created < ?', now - 86400000);
+    this.run('DELETE FROM inventories WHERE received <= ?', now - 86400000);
     this.run('DELETE FROM session_states WHERE updated < ?', now - RUNNING_TTL * 3);
   }
   invite() {
@@ -76,6 +90,44 @@ export class Relay {
     const invite = secret();
     this.run('INSERT INTO invites VALUES (?, ?)', hash(invite), this.now() + 3600000);
     return { invite, expiresIn: 3600 };
+  }
+  // Inventory relay (design: ShinphonyApp docs/design/agent_first_layout_
+  // 20261115.md §1, §4): the daemon publishes one sealed blob per private
+  // pairing, the phone reads them without an SSH connection. The relay never
+  // opens, logs or otherwise interprets the envelope: it only bounds it.
+  inventory(method, auth, body) {
+    const now = this.now();
+    if (method === 'GET') {
+      const device = this.owner(auth);
+      this.run('DELETE FROM inventories WHERE device=? AND received<=?', device.id, now - 86400000);
+      return this.db.prepare(`SELECT host_ref, received, envelope FROM inventories
+        WHERE device=? AND received>? ORDER BY received DESC LIMIT 32`).all(device.id, now - 86400000)
+        .map(row => ({ hostRef: row.host_ref, receivedAt: row.received, envelope: JSON.parse(row.envelope) }));
+    }
+    if (method !== 'PUT') fail(404, 'not_found');
+    fields(body, ['hostRef', 'device', 'envelope']);
+    // Same host credential as /v1/events; the pairing, not the body, names the
+    // device, so a host can only ever write its own device's row.
+    if (typeof auth !== 'string' || auth.length !== 43) fail(401, 'unauthorized');
+    const hostKey = hash(auth);
+    const host = this.get('SELECT h.* FROM hosts h JOIN devices d ON d.id=h.device WHERE h.key=? AND h.active=1 AND d.active=1', hostKey);
+    if (!host) fail(401, 'unauthorized');
+    if (!validHostRef(body.hostRef)) fail(400, 'invalid_host_ref');
+    // Older clients may echo the device they were paired with; it must be this
+    // host's device, never another one's.
+    if (body.device !== undefined && body.device !== host.device) fail(400, 'invalid_device');
+    if (!validEnvelope(body.envelope)) fail(400, 'invalid_inventory');
+    const envelope = JSON.stringify(body.envelope);
+    if (envelope.length > inventoryBlobLimit) fail(400, 'inventory_too_large');
+    // One blob per ten seconds per (device, host): the Hook backs off on 429.
+    const previous = this.get('SELECT received FROM inventories WHERE host_key=?', hostKey);
+    if (previous && now - previous.received < 10000) fail(429, 'rate_limit');
+    this.run(`INSERT INTO inventories (host_key, device, host, host_ref, received, envelope)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(host_key) DO UPDATE SET device=excluded.device, host=excluded.host,
+        host_ref=excluded.host_ref, received=excluded.received, envelope=excluded.envelope`,
+    hostKey, host.device, host.host, body.hostRef, now, envelope);
+    return { accepted: true };
   }
   owner(auth) {
     if (typeof auth !== 'string' || auth.length !== 43) fail(401, 'unauthorized');
@@ -92,6 +144,7 @@ export class Relay {
     if (path === '/v1/live-activity' || path === '/v1/live-activity/token' || path === '/v1/live-activity/auto') {
       return handleActivity(this, method, path, auth, body);
     }
+    if (path === '/v1/inventory') return this.inventory(method, auth, body);
     if (method === 'POST' && path === '/v1/register') {
       fields(body, ['invite', 'deviceToken', 'ownerToken']);
       if (!validToken(body.deviceToken) || typeof body.invite !== 'string' || body.invite.length !== 43) fail(400, 'invalid_registration');
@@ -124,7 +177,7 @@ export class Relay {
     if (path === '/v1/device' && method === 'DELETE') {
       const device = this.owner(auth);
       this.db.transaction(() => {
-        for (const table of ['events', 'hosts', 'pairs', 'live_activities', 'session_states']) this.run(`DELETE FROM ${table} WHERE device=?`, device.id);
+        for (const table of ['events', 'hosts', 'pairs', 'live_activities', 'session_states', 'inventories']) this.run(`DELETE FROM ${table} WHERE device=?`, device.id);
         this.run('DELETE FROM devices WHERE id=?', device.id);
       });
       return { ok: true };
@@ -156,6 +209,9 @@ export class Relay {
         // Re-pairing rotates the credential and cancels the old host's pending events.
         this.run("UPDATE events SET state='revoked' WHERE device=? AND host=? AND state='queued'", pair.device, pair.host);
         this.run('DELETE FROM live_activities WHERE device=? AND host=?', pair.device, pair.host);
+        // The blob belongs to the credential being replaced: never serve it to
+        // the phone under the new one (the Hook republishes at once).
+        this.run('DELETE FROM inventories WHERE device=? AND host=?', pair.device, pair.host);
         this.run('INSERT INTO hosts (key, device, host, active) VALUES (?, ?, ?, 1) ON CONFLICT(device,host) DO UPDATE SET key=excluded.key, active=1', hash(hostToken), pair.device, pair.host);
       });
       return { hostToken, hostId: pair.host };
@@ -168,6 +224,7 @@ export class Relay {
       this.run('DELETE FROM live_activities WHERE device=? AND host=?', device.id, body.hostId);
       this.run('DELETE FROM pairs WHERE device=? AND host=?', device.id, body.hostId);
       this.run('DELETE FROM session_states WHERE device=? AND host=?', device.id, body.hostId);
+      this.run('DELETE FROM inventories WHERE device=? AND host=?', device.id, body.hostId);
       this.run("UPDATE events SET state='revoked' WHERE device=? AND host=? AND state='queued'", device.id, body.hostId);
       return { ok: true };
     }

@@ -42,8 +42,11 @@ type hcTerminal struct {
 	State     string  `json:"state"`
 	Reason    *string `json:"reason"`
 	CreatedMS int64   `json:"created_ms"`
-	PID       int     `json:"pid"`
-	Cwd       string  `json:"cwd"`
+	// StatusMS is when the status last changed: the inventory's `since` for a
+	// terminal no hook event describes.
+	StatusMS int64  `json:"status_ms"`
+	PID      int    `json:"pid"`
+	Cwd      string `json:"cwd"`
 	// The remaining fields are display metadata only (title, space, ancestry).
 	// They stay untyped so an unexpected shape in one of them can never fail the
 	// identity lookup it travels with.
@@ -67,6 +70,12 @@ func (t *hcTarget) valid() bool {
 		(t.Parent == "" || hcAddressRE.MatchString(t.Parent)) && len(t.ParentTitle) <= hcTitleLimit && cleanLabel(t.ParentTitle, hcTitleLimit) == t.ParentTitle &&
 		len(t.Space) <= hcSpaceLimit && cleanLabel(t.Space, hcSpaceLimit) == t.Space
 }
+
+// hookSourceFromEnv reads the terminal identity a hook invocation can see. It
+// keeps what the environment says verbatim: the task-intent path decides "is
+// this an hc environment?" by presence, and must fail closed on a partial
+// identity rather than fall back to an unrelated outer tmux pane. Agent events
+// clean and bound these facts in attachRouteFacts instead.
 func hookSourceFromEnv(agent, thread string, pid int, getenv func(string) string) *hookSource {
 	return &hookSource{Agent: agent, Thread: thread, ParentPID: pid, Tmux: getenv("TMUX"), Pane: getenv("TMUX_PANE"), CodexHome: getenv("CODEX_HOME"),
 		HcAddress: getenv("HC_TERMINAL_ID"), HcSocket: getenv("HC_TERMINAL_SOCKET"), HcSession: getenv("HC_SESSION")}
@@ -167,6 +176,18 @@ func (r *hcRPC) terminal(address string) (hcTerminal, error) {
 		return t, errors.New("hc_target_unavailable")
 	}
 	return t, nil
+}
+
+// terminals lists the core's terminals. Read-only: terminal.list starts nothing
+// and reads no screen, so the inventory can never disturb a running terminal.
+func (r *hcRPC) terminals() ([]hcTerminal, error) {
+	var result struct {
+		Terminals []hcTerminal `json:"terminals"`
+	}
+	if e := r.call("terminal.list", map[string]any{}, &result); e != nil {
+		return nil, e
+	}
+	return result.Terminals, nil
 }
 
 // A pid belongs to the program the terminal currently runs, and herdr `keep`

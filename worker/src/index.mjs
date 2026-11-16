@@ -2,10 +2,8 @@
 // nginx did), applies the same body limits, and forwards to that lane's relay
 // object with the prefix removed.
 import { LANES, RelayObject } from './relay-object.mjs';
+import { bodyLimit } from '../../server/body-limits.mjs';
 export { RelayObject };
-
-const limits = path => path === '/v1/register' || path === '/v1/device' ? 32768
-  : path === '/v1/events' ? 4096 : 2048;
 
 function route(pathname) {
   for (const [name, lane] of Object.entries(LANES)) {
@@ -42,7 +40,7 @@ export default {
     }
     const target = route(url.pathname);
     if (!target) return Response.json({ error: 'not_found' }, { status: 404 });
-    const limit = limits(target.path);
+    const limit = bodyLimit(target.path);
     if (Number(request.headers.get('content-length') ?? 0) > limit) {
       return Response.json({ error: 'body_too_large' }, { status: 413 });
     }

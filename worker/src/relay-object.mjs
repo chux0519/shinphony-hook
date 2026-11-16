@@ -94,6 +94,7 @@ export class RelayObject extends DurableObject {
         const count = table => this.relay.get(`SELECT count(*) n FROM ${table}`).n;
         return reply(200, {
           devices: count('devices'), hosts: count('hosts'), entitlements: count('entitlements'),
+          inventories: count('inventories'),
           events: this.relay.db.prepare(`SELECT state, apns_status, apns_reason, count(*) n FROM events
             GROUP BY state, apns_status, apns_reason`).all(),
         });

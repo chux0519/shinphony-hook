@@ -170,7 +170,14 @@ func pairingSettings(raw json.RawMessage, lines *bool) (notifier.PairingSettings
 	return s, nil
 }
 
-func registerSetup(mux *http.ServeMux, q *queue, manager notifier.Manager) {
+func registerSetup(mux *http.ServeMux, q *queue, manager notifier.Manager, wakeInventory func()) {
+	// A pairing change adds, rotates or removes a destination: the inventory
+	// publisher must look again (non-blocking, debounced in its own goroutine).
+	wake := func() {
+		if wakeInventory != nil {
+			wakeInventory()
+		}
+	}
 	mux.HandleFunc("POST /v1/reset-profile", func(w http.ResponseWriter, r *http.Request) {
 		var p struct {
 			Profile string `json:"profile"`
@@ -208,6 +215,7 @@ func registerSetup(mux *http.ServeMux, q *queue, manager notifier.Manager) {
 			http.Error(w, "pairing_recovery_failed", 409)
 			return
 		}
+		wake()
 		json.NewEncoder(w).Encode(map[string]any{"reset": true})
 	})
 	mux.HandleFunc("POST /v1/pairing-status", func(w http.ResponseWriter, r *http.Request) {
@@ -318,6 +326,7 @@ func registerSetup(mux *http.ServeMux, q *queue, manager notifier.Manager) {
 			if value, keyed, e := manager.LiveActivityLines(p.Profile); e == nil {
 				lines, private = value, keyed
 			}
+			wake()
 			json.NewEncoder(w).Encode(map[string]any{"paired": true, "updated": updated,
 				"private": private, "liveActivityLines": lines})
 			return
@@ -333,6 +342,7 @@ func registerSetup(mux *http.ServeMux, q *queue, manager notifier.Manager) {
 			http.Error(w, code, 409)
 			return
 		}
+		wake()
 		json.NewEncoder(w).Encode(map[string]any{"paired": true, "deliveryVerified": false})
 	})
 	mux.HandleFunc("POST /v1/setup", func(w http.ResponseWriter, r *http.Request) {

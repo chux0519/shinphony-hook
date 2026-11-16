@@ -76,10 +76,18 @@ func TestAgyEventMapping(t *testing.T) {
 	if !ok || e.Mux != "" || !e.valid() || e.Project != "" {
 		t.Fatal(e, ok)
 	}
-	// Antigravity has no verified terminal context route: a Source is refused.
-	e.Source = &hookSource{Agent: "agy", Thread: "c", ParentPID: 2}
+	// Round 02: agy sends its terminal's route facts like every other agent, and
+	// a source that names another session is still refused.
+	e.Source = &hookSource{Agent: "agy", Thread: "c", ParentPID: 2, HcAddress: "t3", HcSession: "default"}
+	e.cleanRoute()
+	if !e.valid() {
+		t.Fatalf("a source identifying this session must be accepted: %+v", e)
+	}
+	other := *e.Source
+	other.Thread = "d"
+	e.Source = &other
 	if e.valid() {
-		t.Fatal("accepted a Source for agy")
+		t.Fatalf("accepted a source for another session: %+v", e.Source)
 	}
 }
 
@@ -259,12 +267,28 @@ func TestAgyHookCLIReachesDaemon(t *testing.T) {
 		t.Fatal(err)
 	}
 	received := make(chan agentEvent, 6)
+	// The child gets one known terminal, never whatever this test process
+	// happens to run inside.
+	testEnv := func(extra ...string) []string {
+		var out []string
+		for _, v := range os.Environ() {
+			drop := false
+			for _, key := range []string{"HC_TERMINAL_ID=", "HC_TERMINAL_SOCKET=", "HC_SESSION=", "TMUX=", "TMUX_PANE=", "SHINPHONY_AGY_TEST_"} {
+				drop = drop || strings.HasPrefix(v, key)
+			}
+			if !drop {
+				out = append(out, v)
+			}
+		}
+		return append(out, extra...)
+	}
 	run := func(event, payload string) (string, *agentEvent, time.Duration) {
 		t.Helper()
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		cmd := exec.CommandContext(ctx, canonical, "-test.run=^TestAgyHookSubprocess$")
-		cmd.Env = append(os.Environ(), "SHINPHONY_AGY_TEST_CHILD=1", "SHINPHONY_AGY_TEST_EVENT="+event)
+		cmd.Env = testEnv("SHINPHONY_AGY_TEST_CHILD=1", "SHINPHONY_AGY_TEST_EVENT="+event,
+			"HC_TERMINAL_ID=t9", "HC_TERMINAL_SOCKET=/tmp/hc/default.sock", "HC_SESSION=default")
 		cmd.Stdin = strings.NewReader(payload)
 		start := time.Now()
 		output, err := cmd.CombinedOutput()
@@ -300,8 +324,14 @@ func TestAgyHookCLIReachesDaemon(t *testing.T) {
 	if out != "{}" {
 		t.Fatal("hook printed more than a neutral empty object:", out)
 	}
-	if event == nil || event.Agent != "agy" || event.Kind != "invocation" || event.Body != "fix the tests" || event.Source != nil {
+	if event == nil || event.Agent != "agy" || event.Kind != "invocation" || event.Body != "fix the tests" {
 		t.Fatal(event)
+	}
+	// Round 02: the real hook binary sends the route facts of the terminal it ran
+	// in, so the inventory can join this event to t9 without guessing.
+	if s := event.Source; s == nil || s.Agent != "agy" || s.HcAddress != "t9" || s.HcSession != "default" ||
+		s.HcSocket != "/tmp/hc/default.sock" || s.Thread != "c-1" || s.ParentPID <= 1 {
+		t.Fatalf("route facts: %+v", s)
 	}
 	// PreToolUse answers with an empty object: no decision, so permissions and
 	// the loop keep their default behavior (never auto_approve / continue).

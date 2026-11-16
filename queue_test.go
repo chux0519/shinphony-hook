@@ -19,6 +19,10 @@ func TestMain(m *testing.M) {
 	if err := privateUmask(); err != nil {
 		panic(err)
 	}
+	// The daemon now publishes its inventory to the relay in the background. No
+	// test may reach the real one: it stays off unless a test points it at its
+	// own server (see inventory_relay_test.go).
+	inventoryRelayBase = ""
 	os.Exit(m.Run())
 }
 

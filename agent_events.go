@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -50,7 +51,9 @@ var agentEventKinds = map[string]bool{"session_start": true, "prompt": true, "st
 	"invocation": true, "resume": true, "background": true, "failure": true}
 
 func (e agentEvent) valid() bool {
-	if e.Source != nil && (e.Agent != "codex" || e.Source.Agent != e.Agent || !identifier.MatchString(e.Source.Thread) || e.Session != sessionKey(e.Agent, e.Source.Thread) || e.Source.ParentPID <= 1) {
+	// Every agent may carry the route facts of its terminal; a source that
+	// describes another agent or another session is still refused.
+	if e.Source != nil && (e.Source.Agent != e.Agent || !identifier.MatchString(e.Source.Thread) || e.Session != sessionKey(e.Agent, e.Source.Thread) || e.Source.ParentPID <= 1) {
 		return false
 	}
 	for _, counter := range []*int{e.Invocation, e.Steps, e.Step, e.Execution} {
@@ -218,6 +221,56 @@ func multiplexer(getenv func(string) string) string {
 	return ""
 }
 
+// attachRouteFacts gives every agent's event the same route facts a tap route
+// uses: the hc terminal and core session, or the tmux pane and its socket. The
+// inventory joins on these; nothing in the notification reads them.
+func attachRouteFacts(e *agentEvent, thread string, pid int, getenv func(string) string) {
+	e.Source = hookSourceFromEnv(e.Agent, thread, pid, getenv)
+	e.Source.cleanRoute()
+}
+
+// cleanRoute drops route facts that do not look like what they claim to be. It
+// never drops the event: a malformed pane costs the inventory a join, not the
+// user a notification. Values are allow-listed, so nothing to strip survives.
+func (e *agentEvent) cleanRoute() {
+	if e.Source != nil {
+		e.Source.cleanRoute()
+	}
+}
+
+func (s *hookSource) cleanRoute() {
+	if s == nil {
+		return
+	}
+	if !hcAddressRE.MatchString(s.HcAddress) {
+		s.HcAddress = ""
+	}
+	if !validHcSocket(s.HcSocket) || len(s.HcSocket) > 1024 {
+		s.HcSocket = ""
+	}
+	if !hcSessionNameRE.MatchString(s.HcSession) || s.HcSession == "." || s.HcSession == ".." {
+		s.HcSession = ""
+	}
+	if !tmuxPaneIDRE.MatchString(s.Pane) {
+		s.Pane = ""
+	}
+}
+
+// tmuxSocketFrom reads the socket out of TMUX ("socket,pid,index"). The socket
+// path may itself contain commas, so the split starts from the right. It is part
+// of a pane's identity: two servers both have a pane %1.
+func tmuxSocketFrom(tmux string) string {
+	parts := strings.Split(tmux, ",")
+	if len(parts) < 3 {
+		return ""
+	}
+	socket := strings.Join(parts[:len(parts)-2], ",")
+	if !filepath.IsAbs(socket) || len(socket) > 1024 {
+		return ""
+	}
+	return socket
+}
+
 func sessionKey(agent, session string) string {
 	sum := sha256.Sum256([]byte("shinphony-session-v1\x00" + agent + "\x00" + session))
 	return hex.EncodeToString(sum[:16])
@@ -370,6 +423,10 @@ func agentEventFromAgy(h notifier.AgyHook, getenv func(string) string) (agentEve
 	return e, true
 }
 
+// errEventIncompatible is a daemon that rejected the shape of the event, not its
+// content: an older daemon refuses route facts it does not know.
+var errEventIncompatible = errors.New("agent_event_incompatible")
+
 func postAgentEvent(ctx context.Context, dir string, e agentEvent) error {
 	body, _ := json.Marshal(e)
 	tr := &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) { return dialLocal(ctx, dir) }}
@@ -381,10 +438,25 @@ func postAgentEvent(ctx context.Context, dir string, e agentEvent) error {
 	}
 	defer resp.Body.Close()
 	io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
+	if resp.StatusCode == http.StatusBadRequest {
+		return errEventIncompatible
+	}
 	if resp.StatusCode != 200 {
 		return errors.New("agent_event_rejected")
 	}
 	return nil
+}
+
+// postAgentEventCompat posts the event with its route facts. A daemon that
+// predates them rejects the event entirely, and the notification matters more
+// than the route, so that one answer is retried without them.
+func postAgentEventCompat(ctx context.Context, dir string, e agentEvent) error {
+	err := postAgentEvent(ctx, dir, e)
+	if e.Source != nil && errors.Is(err, errEventIncompatible) {
+		e.Source = nil
+		return postAgentEvent(ctx, dir, e)
+	}
+	return err
 }
 
 type sessionState struct {
@@ -405,16 +477,23 @@ type sessionState struct {
 	// Documented counters, monotonic per conversation: a replay cannot move them
 	// backwards, and a stale event cannot complete or reopen newer work.
 	lastInvocation, lastSteps int
-	hasInvocation, hasSteps    bool
-	lastStep                   int
-	hasStep                    bool
-	lastExecution              int
-	hasExecution               bool
+	hasInvocation, hasSteps   bool
+	lastStep                  int
+	hasStep                   bool
+	lastExecution             int
+	hasExecution              bool
 	// The last tool step whose answer-sheet was already announced.
-	resumeStep    int
-	hasResume     bool
+	resumeStep int
+	hasResume  bool
 	// The question the agent asked and the user has not answered yet.
 	question, options string
+	// Read-only inventory identity and outcome: what the last accepted event
+	// proved, kept for `inventory`. decide never reads these back, so the
+	// notification decisions above stay exactly what they were.
+	agent, mux, hcAddress, pane, project string
+	hcSession, tmuxSocket                string
+	state, stateMessage                  string
+	stateAt                              time.Time
 }
 
 // tracker holds per-session turn state (in memory: a restart only forgets
@@ -458,6 +537,32 @@ func (t *tracker) decide(e agentEvent, s settings, now time.Time) decision {
 		t.sessions[key] = st
 	}
 	st.seen = now
+	// Inventory identity: whatever route facts the event carries. A codex event
+	// carries its terminal or pane; the others only the multiplexer and project,
+	// so the inventory falls back to a unique project match for those.
+	if e.Agent != "" {
+		st.agent = e.Agent
+	}
+	if e.Mux != "" {
+		st.mux = e.Mux
+	}
+	if e.Project != "" {
+		st.project = e.Project
+	}
+	if e.Source != nil {
+		if e.Source.HcAddress != "" {
+			st.hcAddress = e.Source.HcAddress
+		}
+		if e.Source.HcSession != "" {
+			st.hcSession = e.Source.HcSession
+		}
+		if e.Source.Pane != "" {
+			st.pane = e.Source.Pane
+		}
+		if socket := tmuxSocketFrom(e.Source.Tmux); socket != "" {
+			st.tmuxSocket = socket
+		}
+	}
 	firstSighting := !st.heard
 	st.heard = true
 	d := &eventDetails{Agent: e.Agent, Session: e.Session, Project: e.Project, Visibility: "silent"}
@@ -675,10 +780,111 @@ func (t *tracker) decide(e agentEvent, s settings, now time.Time) decision {
 			status, d.Category, d.Title, d.Body, d.Visibility = "attention", "question", st.question, st.options, "silent"
 		}
 	}
+	if state := inventoryStateAfter(d); e.Kind != "session_end" && state != "" {
+		// Inventory only: the state this event left the session in. Recorded even
+		// when the push below is rate limited, because the agent state is real.
+		st.state, st.stateAt, st.stateMessage = state, now, inventoryStateMessage(d)
+	}
 	if !t.take(s.RateLimitPerMinute, now) {
 		return decision{Reason: "rate_limited"}
 	}
 	return decision{Status: status, ID: id, Details: d}
+}
+
+// inventoryStateAfter maps a decision's category to the state a conversation row
+// shows. Only categories the tracker actually decided on are listed.
+func inventoryStateAfter(d *eventDetails) string {
+	switch d.Category {
+	case "task_started":
+		return "working"
+	case "question":
+		return "question"
+	case "approval_required":
+		return "approval"
+	case "task_complete":
+		return "done"
+	case "error":
+		return "failed"
+	case "session_started":
+		return "idle"
+	}
+	return ""
+}
+
+// inventoryStateMessage is the text a row may show: only a question or an
+// approval request, never a prompt, a reply or an error body.
+func inventoryStateMessage(d *eventDetails) string {
+	if d.Category != "question" && d.Category != "approval_required" {
+		return ""
+	}
+	text := d.Title
+	if text == "" {
+		text = d.Body
+	}
+	return excerpt(text, 120, false)
+}
+
+// trackedConversation is one row of tracker state, read-only. The route facts
+// are the identity the inventory joins on: an hc terminal or a tmux pane when
+// the event carried one, otherwise mux + project (resolved by the caller).
+type trackedConversation struct {
+	Agent, Mux, HcAddress, Pane, Project string
+	HcSession, TmuxSocket                string
+	State, Message                       string
+	Since, Seen                          int64
+}
+
+// inventoryStates snapshots every session the tracker still holds. A `done`
+// turn quietly becomes `idle` after a day; `failed` stays until a new turn
+// starts, so it is reported as it is.
+func (t *tracker) inventoryStates(now time.Time) []trackedConversation {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	out := make([]trackedConversation, 0, len(t.sessions))
+	// A pane or terminal hosts one agent at a time, so sessions that name the
+	// same route are the same conversation over time: only the one seen last is
+	// still an occupant. Without this, an agent that exits without a session end
+	// (agy never reports one) would shadow its own pane until the freshness limit.
+	occupants := map[string]int{}
+	for _, st := range t.sessions {
+		if st.state == "" || st.stateAt.IsZero() || st.seen.IsZero() {
+			continue
+		}
+		state := st.state
+		if state == "done" && now.Sub(st.stateAt) >= doneStateDecay {
+			state = "idle"
+		}
+		entry := trackedConversation{Agent: st.agent, Mux: st.mux, HcAddress: st.hcAddress, Pane: st.pane, Project: st.project,
+			HcSession: st.hcSession, TmuxSocket: st.tmuxSocket,
+			State: state, Message: st.stateMessage, Since: st.stateAt.Unix(), Seen: st.seen.Unix()}
+		key := routeKey(st.hcSession, st.hcAddress, st.tmuxSocket, st.pane)
+		if key == "" {
+			out = append(out, entry)
+			continue
+		}
+		if at, ok := occupants[key]; ok {
+			if entry.Seen > out[at].Seen {
+				out[at] = entry
+			}
+			continue
+		}
+		occupants[key] = len(out)
+		out = append(out, entry)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		a, b := out[i], out[j]
+		if a.Agent != b.Agent {
+			return a.Agent < b.Agent
+		}
+		if a.HcAddress != b.HcAddress {
+			return a.HcAddress < b.HcAddress
+		}
+		if a.Pane != b.Pane {
+			return a.Pane < b.Pane
+		}
+		return a.Project < b.Project
+	})
+	return out
 }
 
 // allow spends one push from the shared budget (scripts share it with agents).

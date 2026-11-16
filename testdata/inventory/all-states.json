@@ -1,0 +1,224 @@
+{
+  "schema": 1,
+  "generatedAt": 1763250000,
+  "host": "",
+  "conversations": [
+    {
+      "id": "c_ca6471cc208bbfec",
+      "mux": "hc",
+      "group": {
+        "kind": "other",
+        "name": ""
+      },
+      "title": "tmp",
+      "directory": "/tmp",
+      "agent": null,
+      "state": "unknown",
+      "stateSource": "none",
+      "since": 1763242000,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "tmp",
+        "multiplexer": "hc",
+        "session": "t6",
+        "window": "t6",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_5f95c3cde5f5defe",
+      "mux": "hc",
+      "group": {
+        "kind": "hcSpace",
+        "name": "Laclune"
+      },
+      "title": "agy-scan",
+      "directory": "/Users/me/repos/laclune",
+      "agent": "agy",
+      "state": "failed",
+      "stateSource": "hook",
+      "since": 1763249800,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "agy",
+        "thread": "",
+        "title": "agy-scan",
+        "multiplexer": "hc",
+        "session": "agy-scan",
+        "window": "t3",
+        "route": "",
+        "binary": "",
+        "space": "Laclune"
+      }
+    },
+    {
+      "id": "c_f44d9811abb49f3a",
+      "mux": "hc",
+      "group": {
+        "kind": "hcSpace",
+        "name": "Other"
+      },
+      "title": "codex-old",
+      "directory": "/Users/me/repos/other",
+      "agent": "codex",
+      "state": "done",
+      "stateSource": "hook",
+      "since": 1763246400,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "codex",
+        "thread": "",
+        "title": "codex-old",
+        "multiplexer": "hc",
+        "session": "codex-old",
+        "window": "t5",
+        "route": "",
+        "binary": "",
+        "space": "Other"
+      }
+    },
+    {
+      "id": "c_d8f3667f10b4c7c1",
+      "mux": "hc",
+      "group": {
+        "kind": "hcSpace",
+        "name": "Shinphony"
+      },
+      "title": "claude-main",
+      "directory": "/Users/me/repos/shinphony",
+      "agent": "claude",
+      "state": "question",
+      "stateSource": "hook",
+      "since": 1763249910,
+      "message": "Which branch?",
+      "route": {
+        "version": 1,
+        "agent": "claude",
+        "thread": "",
+        "title": "claude-main",
+        "multiplexer": "hc",
+        "session": "claude-main",
+        "window": "t1",
+        "route": "",
+        "binary": "",
+        "space": "Shinphony"
+      }
+    },
+    {
+      "id": "c_1df558b3f35c43a3",
+      "mux": "hc",
+      "group": {
+        "kind": "hcSpace",
+        "name": "Shinphony"
+      },
+      "title": "codex-helper",
+      "directory": "/Users/me/repos/shinphony",
+      "agent": "codex",
+      "state": "approval",
+      "stateSource": "hook",
+      "since": 1763249960,
+      "message": "Allow bash?",
+      "parent": "c_d8f3667f10b4c7c1",
+      "route": {
+        "version": 1,
+        "agent": "codex",
+        "thread": "",
+        "title": "codex-helper",
+        "multiplexer": "hc",
+        "session": "codex-helper",
+        "window": "t2",
+        "route": "",
+        "binary": "",
+        "parent": "t1",
+        "parentTitle": "claude-main",
+        "space": "Shinphony"
+      }
+    },
+    {
+      "id": "c_d5cf7a7395180418",
+      "mux": "hc",
+      "group": {
+        "kind": "hcSpace",
+        "name": "Shinphony"
+      },
+      "title": "pi-helper",
+      "directory": "/Users/me/repos/shinphony",
+      "agent": "pi",
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763249400,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "pi",
+        "thread": "",
+        "title": "pi-helper",
+        "multiplexer": "hc",
+        "session": "pi-helper",
+        "window": "t4",
+        "route": "",
+        "binary": "",
+        "space": "Shinphony"
+      }
+    },
+    {
+      "id": "c_282e6a21a0bff018",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "editor",
+      "directory": "/Users/me/repos/shinphony",
+      "agent": null,
+      "state": "working",
+      "stateSource": "mux",
+      "since": 1763249970,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "editor",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "editor",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_ac6e4d52255a1158",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "logs",
+      "directory": "/var/log",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763242800,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "logs",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "logs",
+        "route": "",
+        "binary": ""
+      }
+    }
+  ],
+  "errors": []
+}

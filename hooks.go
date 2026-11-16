@@ -155,6 +155,7 @@ func hookCLI(kind string, args []string) {
 		}
 	}
 	var agentEv agentEvent
+	var agentThread string
 	var id, status string
 	var ok bool
 	if nativeHook {
@@ -163,12 +164,14 @@ func hookCLI(kind string, args []string) {
 			if len(args) == 1 {
 				if h, parsed := notifier.ParseAgyHook(args[0], raw); parsed {
 					agentEv, ok = agentEventFromAgy(h, os.Getenv)
+					agentThread = h.Session
 				}
 			}
 		} else {
 			var h notifier.HookInfo
 			if h, ok = notifier.ParseHook(raw); ok {
 				agentEv, ok = agentEventFromHook(strings.TrimSuffix(kind, "-hook-all"), h, os.Getenv)
+				agentThread = h.Session
 			}
 		}
 	} else {
@@ -188,17 +191,21 @@ func hookCLI(kind string, args []string) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	if agentEv.Agent == "codex" {
-		if h, ok := notifier.ParseHook(raw); ok {
-			pid := os.Getppid()
+	// Every agent's event carries the route facts of its terminal, so the
+	// inventory joins it to a pane or terminal instead of guessing by project.
+	// Codex may not pass its environment through, so its facts are read from the
+	// agent process; the others inherit theirs (dsh through its sandbox too).
+	if agentEv.Agent != "" && agentThread != "" {
+		pid := os.Getppid()
+		if agentEv.Agent == "codex" {
 			if owner := codexOwner(ctx, pid); owner > 1 {
 				pid = owner
 			}
-			agentEv.Source = hookSourceFromEnv("codex", h.Session, pid, agentGetenv(ctx, pid, os.Getenv))
 		}
+		attachRouteFacts(&agentEv, agentThread, pid, agentGetenv(ctx, pid, os.Getenv))
 	}
 	if agentEv.Agent != "" {
-		_ = postAgentEvent(ctx, dir, agentEv)
+		_ = postAgentEventCompat(ctx, dir, agentEv)
 		return
 	}
 	var source *hookSource

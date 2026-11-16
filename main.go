@@ -105,7 +105,7 @@ func run() error {
 	// an optional event status, so it is the only form with two or three
 	// arguments after the command.
 	if len(args) < 1 || len(args) > 3 {
-		return errors.New("usage: " + commandName + " [flags] init|install-service|uninstall-service|serve|status|doctor|event|sessions|version")
+		return errors.New("usage: " + commandName + " [flags] init|install-service|uninstall-service|serve|status|doctor|event|sessions|inventory|version")
 	}
 	if args[0] == "debug-hc-capture" {
 		if len(args) < 2 {
@@ -119,7 +119,7 @@ func run() error {
 		return debugHcCapture(os.Stdout, args[1], status)
 	}
 	if len(args) > 2 || (len(args) == 2 && args[0] != "setup-status" && args[0] != "setup-latest" && args[0] != "attach-event" && args[0] != "attach-recent" && args[0] != "resolve-event") {
-		return errors.New("usage: " + commandName + " [flags] init|install-service|uninstall-service|serve|status|doctor|event|sessions|version")
+		return errors.New("usage: " + commandName + " [flags] init|install-service|uninstall-service|serve|status|doctor|event|sessions|inventory|version")
 	}
 	if args[0] == "version" {
 		fmt.Println(version)
@@ -127,6 +127,11 @@ func run() error {
 	}
 	if args[0] == "sessions" {
 		return sessionsCLI(os.Stdout)
+	}
+	if args[0] == "inventory" {
+		// Read-only and daemon-optional: the tracker's state comes from the local
+		// endpoint when the service runs, the mux rows are printed either way.
+		return inventoryCLI(*dir, os.Stdout)
 	}
 	if args[0] == "diagnose-codex" {
 		return json.NewEncoder(os.Stdout).Encode(diagnoseCodex())
@@ -315,19 +320,48 @@ func serve(ctx context.Context, dir string, send sender, credentialDirs ...strin
 	mux := http.NewServeMux()
 	q.registerContexts(mux)
 	q.registerPresence(mux)
+	turns := newTracker()
+	wakeInventory := func() {}
+	registerInventory(mux, func(ctx context.Context) inventory {
+		// The daemon holds the only copy of in-memory agent state, so the merge
+		// happens here whenever the service runs; the CLI only prints mux rows.
+		return buildInventory(ctx, realInventoryOptions(turns.inventoryStates, time.Now()))
+	})
+	if len(credentialDirs) > 0 && inventoryRelayBase != "" {
+		// The phone's view of every paired host, without SSH: a background job
+		// with its own goroutine and client, never on the event path. No private
+		// pairing means it does nothing at all.
+		publisher := newInventoryPublisher(credentialDirs[0], func(ctx context.Context) inventory {
+			return buildInventory(ctx, realInventoryOptions(turns.inventoryStates, time.Now()))
+		})
+		// An event only arms a debounced rebuild through a buffered channel: no
+		// listing, no lock and no wait on the path that answers the hook.
+		wakeInventory = publisher.Wake
+		go publisher.run(ctx)
+	}
 	if len(credentialDirs) > 0 {
 		manager := notifier.Manager{Directory: credentialDirs[0]}
-		registerSetup(mux, q, manager)
-		turns := newTracker()
+		registerSetup(mux, q, manager, wakeInventory)
 		mux.HandleFunc("POST /v1/agent-events", func(w http.ResponseWriter, r *http.Request) {
 			r.Body = http.MaxBytesReader(w, r.Body, 4096)
 			d := json.NewDecoder(r.Body)
 			d.DisallowUnknownFields()
 			var e agentEvent
-			if d.Decode(&e) != nil || d.Decode(new(any)) != io.EOF || !e.valid() {
+			if d.Decode(&e) != nil || d.Decode(new(any)) != io.EOF {
 				http.Error(w, "invalid_event", 400)
 				return
 			}
+			// Route facts are optional join data: drop the ones that are malformed
+			// instead of refusing the notification they travel with.
+			e.cleanRoute()
+			if !e.valid() {
+				http.Error(w, "invalid_event", 400)
+				return
+			}
+			// Any agent event may change the inventory — including a session
+			// start or stop that never notifies. The signal is non-blocking: the
+			// rebuild happens in the publisher's goroutine, three seconds later.
+			wakeInventory()
 			dec := turns.decide(e, loadSettings(dir), time.Now())
 			if dec.Status == "" {
 				json.NewEncoder(w).Encode(map[string]any{"queued": false, "reason": dec.Reason})

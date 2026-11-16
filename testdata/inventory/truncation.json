@@ -1,0 +1,5209 @@
+{
+  "schema": 1,
+  "generatedAt": 1763250000,
+  "host": "",
+  "conversations": [
+    {
+      "id": "c_d8f3667f10b4c7c1",
+      "mux": "hc",
+      "group": {
+        "kind": "hcSpace",
+        "name": "Trunc"
+      },
+      "title": "new-helper",
+      "directory": "/Users/me/repos/trunc",
+      "agent": "codex",
+      "state": "working",
+      "stateSource": "mux",
+      "since": 1763249999,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "codex",
+        "thread": "",
+        "title": "new-helper",
+        "multiplexer": "hc",
+        "session": "new-helper",
+        "window": "t1",
+        "route": "",
+        "binary": "",
+        "space": "Trunc"
+      }
+    },
+    {
+      "id": "c_282e6a21a0bff018",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w0",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "working",
+      "stateSource": "mux",
+      "since": 1763249990,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w0",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w0",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_ac6e4d52255a1158",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w1",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "working",
+      "stateSource": "mux",
+      "since": 1763249990,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w1",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w1",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_e55ff444123f0d6a",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w10",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149990,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w10",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w10",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_ef663771f3dca256",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w100",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149900,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w100",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w100",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_15eea9910ab1fca2",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w101",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149899,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w101",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w101",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_68e7e7cc003e5d06",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w102",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149898,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w102",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w102",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_9846298d9f46d3d9",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w103",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149897,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w103",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w103",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_f9dd03d6ba29360a",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w104",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149896,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w104",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w104",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_1acec10962f57995",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w105",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149895,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w105",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w105",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_709a1ad96001fef4",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w106",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149894,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w106",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w106",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_217c589fc8ae094a",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w107",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149893,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w107",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w107",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_22df3726f372ff5b",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w108",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149892,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w108",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w108",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_89be20eab5947abe",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w109",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149891,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w109",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w109",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_3d8b5f573953459f",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w11",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149989,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w11",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w11",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_dd0eaff4bc95cd86",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w110",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149890,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w110",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w110",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_d19b587180b1f917",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w111",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149889,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w111",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w111",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_5254c07942679fe4",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w112",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149888,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w112",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w112",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_33907b5fe3405e86",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w113",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149887,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w113",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w113",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_0d3056af691b4f92",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w114",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149886,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w114",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w114",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_60adad09b0ece706",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w115",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149885,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w115",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w115",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_6a720970e3a3f27a",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w116",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149884,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w116",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w116",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_ca0f22f77d251af4",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w117",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149883,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w117",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w117",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_e9175d6f7fa3611c",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w118",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149882,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w118",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w118",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_dd2008c435f9a59a",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w119",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149881,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w119",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w119",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_487382689d2ccada",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w12",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149988,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w12",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w12",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_ca97aeadda8e295e",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w120",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149880,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w120",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w120",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_6e43344cc57698d7",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w121",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149879,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w121",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w121",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_8ee397271caa5327",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w122",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149878,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w122",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w122",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_a8294a557c00caef",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w123",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149877,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w123",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w123",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_ada2d6261caf08a3",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w124",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149876,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w124",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w124",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_5321cbe10dcad309",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w125",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149875,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w125",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w125",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_50413f0b2fa3aa8f",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w126",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149874,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w126",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w126",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_d9a6a9f626b379af",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w127",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149873,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w127",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w127",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_1805346d053fc2c3",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w128",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149872,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w128",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w128",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_b475a3f711705de7",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w129",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149871,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w129",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w129",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_af427067d61524ae",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w13",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149987,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w13",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w13",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_2f1a5f426533f71f",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w130",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149870,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w130",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w130",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_fcc0c1da8b954a31",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w131",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149869,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w131",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w131",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_0e4ed1c1d71f352d",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w132",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149868,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w132",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w132",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_1698a0cc422b1bfc",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w133",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149867,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w133",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w133",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_3404ceb1ee14e53e",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w134",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149866,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w134",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w134",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_72bed1b08cd41d55",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w135",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149865,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w135",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w135",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_2a436c1874d96486",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w136",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149864,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w136",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w136",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_e2af1aca74c57d80",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w137",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149863,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w137",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w137",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_53b1e929b41907e0",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w138",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149862,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w138",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w138",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_a358eaca66680a5a",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w139",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149861,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w139",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w139",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_d78ebd1af3a5fa7b",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w14",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149986,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w14",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w14",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_ba5bf695a151bb5f",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w140",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149860,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w140",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w140",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_239a825bcb4666b3",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w141",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149859,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w141",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w141",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_787e3ee965290e27",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w142",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149858,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w142",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w142",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_bfc2967718a245ec",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w143",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149857,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w143",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w143",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_d0d002f4007f2ebc",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w144",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149856,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w144",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w144",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_02153407e81cfd3b",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w145",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149855,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w145",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w145",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_7887d41fb752109e",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w146",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149854,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w146",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w146",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_81ca6675ac726c8b",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w147",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149853,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w147",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w147",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_83cbe9e9d6682112",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w148",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149852,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w148",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w148",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_319e881189f5500e",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w149",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149851,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w149",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w149",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_3e42918077b8cc32",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w15",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149985,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w15",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w15",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_834905d2692c87d7",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w150",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149850,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w150",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w150",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_f43127a499241c67",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w151",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149849,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w151",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w151",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_6c45ceaf46ac62c4",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w152",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149848,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w152",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w152",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_cf064f380b2a9be2",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w153",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149847,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w153",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w153",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_c0e8af0b82d0f969",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w154",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149846,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w154",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w154",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_98ce9872a2138c7a",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w155",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149845,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w155",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w155",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_b38d8bbb496e7cbb",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w156",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149844,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w156",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w156",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_1952b7da4dfbbca0",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w157",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149843,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w157",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w157",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_0cc36cd52914ed94",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w158",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149842,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w158",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w158",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_d5a909343cce5fa7",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w159",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149841,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w159",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w159",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_78291b5331ba547c",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w16",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149984,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w16",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w16",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_2d761615bd298e57",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w160",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149840,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w160",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w160",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_e99b162c933e9114",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w161",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149839,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w161",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w161",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_40d0d814ca73f0f1",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w162",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149838,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w162",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w162",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_a5b80a08b5248e89",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w163",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149837,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w163",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w163",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_44a8684f3f8e1bbe",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w164",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149836,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w164",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w164",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_61cbc9b222c9e726",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w165",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149835,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w165",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w165",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_4853aabecf08b820",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w166",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149834,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w166",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w166",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_16e0ac19b568e419",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w167",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149833,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w167",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w167",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_5962eda09fba676a",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w168",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149832,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w168",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w168",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_64e910f6d6873a06",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w169",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149831,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w169",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w169",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_e68499f7d5225aa1",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w17",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149983,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w17",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w17",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_5422df63298a671f",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w170",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149830,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w170",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w170",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_f76a89b7b46ceb96",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w171",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149829,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w171",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w171",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_01bd79ab602d4f76",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w172",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149828,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w172",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w172",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_2a563a0a3a757a11",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w173",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149827,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w173",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w173",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_8bb5ca9d2649dc18",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w174",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149826,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w174",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w174",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_dedddd50d90e1133",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w175",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149825,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w175",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w175",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_78a465ab322e51a6",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w176",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149824,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w176",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w176",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_f6806a7079a07fdf",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w177",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149823,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w177",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w177",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_9d645e33b3cebe15",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w178",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149822,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w178",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w178",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_0ef974ee02fc094f",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w179",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149821,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w179",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w179",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_ebde9868f51c60ff",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w18",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149982,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w18",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w18",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_b1018d20e8f6cce1",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w180",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149820,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w180",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w180",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_22aa502fd5087c48",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w181",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149819,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w181",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w181",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_4d45ffe94f799748",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w182",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149818,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w182",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w182",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_417c90a43385aff0",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w183",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149817,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w183",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w183",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_ce198ea176346b15",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w184",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149816,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w184",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w184",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_eb4266f6dd963165",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w185",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149815,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w185",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w185",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_b051025124dc28f3",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w186",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149814,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w186",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w186",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_fe3494403577c132",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w187",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149813,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w187",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w187",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_c5b296a94c75ee87",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w188",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149812,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w188",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w188",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_0877065353e04203",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w189",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149811,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w189",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w189",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_0caf9f90334c5dc2",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w19",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149981,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w19",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w19",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_f5dc605d108948e3",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w190",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149810,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w190",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w190",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_fbe9aef93f914a5c",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w191",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149809,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w191",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w191",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_a22906b0fa6ca363",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w192",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149808,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w192",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w192",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_043dc2ec463a9fbe",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w193",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149807,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w193",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w193",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_410b95ddd389c246",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w194",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149806,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w194",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w194",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_c51aab0866de9d1a",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w195",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149805,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w195",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w195",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_7364365eeb9efa64",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w196",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149804,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w196",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w196",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_ccca9da95d85ea13",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w197",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149803,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w197",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w197",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_bfb536713c52a26a",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w198",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149802,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w198",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w198",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_d331350cd7e480c0",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w2",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "working",
+      "stateSource": "mux",
+      "since": 1763249990,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w2",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w2",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_76b75bfbd594f25a",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w20",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149980,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w20",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w20",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_5d86161115d022bf",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w21",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149979,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w21",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w21",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_9f71ca0ee8fb9567",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w22",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149978,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w22",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w22",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_09a19703c05fcae0",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w23",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149977,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w23",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w23",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_5f853b75c68c2a34",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w24",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149976,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w24",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w24",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_10997bd8b9b5ca8f",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w25",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149975,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w25",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w25",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_6cd11784c383dc91",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w26",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149974,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w26",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w26",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_05fb0f8e59c66cab",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w27",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149973,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w27",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w27",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_0ef378c03f50db0a",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w28",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149972,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w28",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w28",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_8fd93056015a23d8",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w29",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149971,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w29",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w29",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_5f3d04f175c86689",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w3",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "working",
+      "stateSource": "mux",
+      "since": 1763249990,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w3",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w3",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_216b73cbbdaf499e",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w30",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149970,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w30",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w30",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_5c4acf34b55694bd",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w31",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149969,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w31",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w31",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_c130a1725e74cc68",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w32",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149968,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w32",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w32",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_9e1f1d903fda1fae",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w33",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149967,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w33",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w33",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_c9975098fd01cf86",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w34",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149966,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w34",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w34",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_79ae3788f259b6d1",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w35",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149965,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w35",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w35",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_e07148a60d91d628",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w36",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149964,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w36",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w36",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_edebe0b39aa9da0c",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w37",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149963,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w37",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w37",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_09784ed677a942cf",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w38",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149962,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w38",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w38",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_318a750d3a07f61e",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w39",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149961,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w39",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w39",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_7285bfe6ae03e10b",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w4",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "working",
+      "stateSource": "mux",
+      "since": 1763249990,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w4",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w4",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_f448e7b211525880",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w40",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149960,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w40",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w40",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_4d85de8b950830b4",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w41",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149959,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w41",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w41",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_31ffc75ba6017be1",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w42",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149958,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w42",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w42",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_f79f6ab6ed950ea7",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w43",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149957,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w43",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w43",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_b711c3cb75870f30",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w44",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149956,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w44",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w44",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_c52ba30d54acf4a7",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w45",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149955,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w45",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w45",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_37dc89a1b946fd56",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w46",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149954,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w46",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w46",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_63fa18c94f6c7f6c",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w47",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149953,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w47",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w47",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_25426e14aff74784",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w48",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149952,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w48",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w48",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_9a95bc99a4b7246b",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w49",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149951,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w49",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w49",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_6ae44b920d7840fc",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w5",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149995,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w5",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w5",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_6d238efc53910682",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w50",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149950,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w50",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w50",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_8054db8205a11660",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w51",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149949,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w51",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w51",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_0a526cda0f96e708",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w52",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149948,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w52",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w52",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_9a537d45ba210854",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w53",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149947,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w53",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w53",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_1bd2ec167ebca315",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w54",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149946,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w54",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w54",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_116669f9f980af59",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w55",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149945,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w55",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w55",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_c6db7411c8991247",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w56",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149944,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w56",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w56",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_1844a7c09c86809e",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w57",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149943,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w57",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w57",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_909218444e2fc362",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w58",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149942,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w58",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w58",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_92a423e9322fd7c5",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w59",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149941,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w59",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w59",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_6fd6fcf8871bec9a",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w6",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149994,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w6",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w6",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_7876d81861b6e7b5",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w60",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149940,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w60",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w60",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_94d4b9fc1413fb49",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w61",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149939,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w61",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w61",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_8bda6b8d4fc22099",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w62",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149938,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w62",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w62",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_178a5bc8014ac3b4",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w63",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149937,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w63",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w63",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_40c51883665d860e",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w64",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149936,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w64",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w64",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_fb7fd39486ccafe3",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w65",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149935,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w65",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w65",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_180d096b0664795c",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w66",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149934,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w66",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w66",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_19adf6668ebda352",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w67",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149933,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w67",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w67",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_8801ade48c9b128b",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w68",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149932,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w68",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w68",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_29fb0ee3f8e6e575",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w69",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149931,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w69",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w69",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_aa7bde8d6db0d4d7",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w7",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149993,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w7",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w7",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_8f9c0e2f4a469d64",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w70",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149930,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w70",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w70",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_63d0cc777240ac1f",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w71",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149929,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w71",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w71",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_204b597507a414ca",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w72",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149928,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w72",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w72",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_d3666fb742fca6e4",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w73",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149927,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w73",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w73",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_b6c88494b67ea0e3",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w74",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149926,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w74",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w74",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_9e75ae1324f12a43",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w75",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149925,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w75",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w75",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_4795f171a24fb080",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w76",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149924,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w76",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w76",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_79a47f79eb799f26",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w77",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149923,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w77",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w77",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_31bad32fed8e88b3",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w78",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149922,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w78",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w78",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_e9cfd03dfd39c010",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w79",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149921,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w79",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w79",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_c8b4f42ceec4058d",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w8",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149992,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w8",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w8",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_9373c5c7dbe64568",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w80",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149920,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w80",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w80",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_d3ed346d928811f6",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w81",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149919,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w81",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w81",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_0551652874c930ff",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w82",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149918,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w82",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w82",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_e062ced36ecc7457",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w83",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149917,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w83",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w83",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_0d8ac540325a14ba",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w84",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149916,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w84",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w84",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_75c77b96a2024c3e",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w85",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149915,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w85",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w85",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_1485deae156bf8fd",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w86",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149914,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w86",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w86",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_efa9014eaefb3dae",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w87",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149913,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w87",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w87",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_f92c76ce49442a17",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w88",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149912,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w88",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w88",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_39e26f2bcaeca801",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w89",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149911,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w89",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w89",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_36595afe9aa288c8",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w9",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149991,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w9",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w9",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_8b4fae3a031ed477",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w90",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149910,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w90",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w90",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_f8dc755775cf2a41",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w91",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149909,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w91",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w91",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_999f42ecbeada3ed",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w92",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149908,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w92",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w92",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_f1842bcf3a29766b",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w93",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149907,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w93",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w93",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_9caa25a51a47a744",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w94",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149906,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w94",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w94",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_61547f2515fe25c1",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w95",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149905,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w95",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w95",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_f7e95d6903f8b31d",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w96",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149904,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w96",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w96",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_cc48ce935674ccf7",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w97",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149903,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w97",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w97",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_c6bfa05b8ecaa6bd",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w98",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149902,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w98",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w98",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_e82f8ad3877d27fd",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "w99",
+      "directory": "/Users/me/repos/trunc",
+      "agent": null,
+      "state": "idle",
+      "stateSource": "mux",
+      "since": 1763149901,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "",
+        "thread": "",
+        "title": "w99",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "w99",
+        "route": "",
+        "binary": ""
+      }
+    }
+  ],
+  "errors": []
+}
