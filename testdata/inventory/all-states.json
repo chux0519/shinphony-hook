@@ -4,6 +4,114 @@
   "host": "",
   "conversations": [
     {
+      "id": "c_5ab2c3bfb964815c",
+      "mux": "hc",
+      "group": {
+        "kind": "other",
+        "name": ""
+      },
+      "title": "codex-nostatus",
+      "directory": "/Users/me/repos/shinphony",
+      "agent": "codex",
+      "kind": "agent",
+      "state": "unknown",
+      "stateSource": "none",
+      "since": 1763250000,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "codex",
+        "thread": "",
+        "title": "codex-nostatus",
+        "multiplexer": "hc",
+        "session": "codex-nostatus",
+        "window": "t10",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_79443f88d0558de2",
+      "mux": "hc",
+      "group": {
+        "kind": "other",
+        "name": ""
+      },
+      "title": "herdr-blocked",
+      "directory": "/Users/me/repos/shinphony",
+      "agent": "codex",
+      "kind": "agent",
+      "state": "question",
+      "stateSource": "mux",
+      "since": 1763249985,
+      "message": "Allow bash?",
+      "route": {
+        "version": 1,
+        "agent": "codex",
+        "thread": "",
+        "title": "herdr-blocked",
+        "multiplexer": "hc",
+        "session": "herdr-blocked",
+        "window": "t7",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_3cfe9e04e18bf7d7",
+      "mux": "hc",
+      "group": {
+        "kind": "other",
+        "name": ""
+      },
+      "title": "herdr-done",
+      "directory": "/Users/me/repos/shinphony",
+      "agent": "codex",
+      "kind": "agent",
+      "state": "done",
+      "stateSource": "mux",
+      "since": 1763249965,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "codex",
+        "thread": "",
+        "title": "herdr-done",
+        "multiplexer": "hc",
+        "session": "herdr-done",
+        "window": "t9",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_6961ec31a41a15d3",
+      "mux": "hc",
+      "group": {
+        "kind": "other",
+        "name": ""
+      },
+      "title": "herdr-error",
+      "directory": "/Users/me/repos/laclune",
+      "agent": "agy",
+      "kind": "agent",
+      "state": "failed",
+      "stateSource": "mux",
+      "since": 1763249975,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "agy",
+        "thread": "",
+        "title": "herdr-error",
+        "multiplexer": "hc",
+        "session": "herdr-error",
+        "window": "t8",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
       "id": "c_ca6471cc208bbfec",
       "mux": "hc",
       "group": {
@@ -13,7 +121,8 @@
       "title": "tmp",
       "directory": "/tmp",
       "agent": null,
-      "state": "unknown",
+      "kind": "shell",
+      "state": "idle",
       "stateSource": "none",
       "since": 1763242000,
       "message": "",
@@ -39,9 +148,10 @@
       "title": "agy-scan",
       "directory": "/Users/me/repos/laclune",
       "agent": "agy",
-      "state": "failed",
-      "stateSource": "hook",
-      "since": 1763249800,
+      "kind": "agent",
+      "state": "working",
+      "stateSource": "mux",
+      "since": 1763249995,
       "message": "",
       "route": {
         "version": 1,
@@ -66,6 +176,7 @@
       "title": "codex-old",
       "directory": "/Users/me/repos/other",
       "agent": "codex",
+      "kind": "agent",
       "state": "done",
       "stateSource": "hook",
       "since": 1763246400,
@@ -93,6 +204,7 @@
       "title": "claude-main",
       "directory": "/Users/me/repos/shinphony",
       "agent": "claude",
+      "kind": "agent",
       "state": "question",
       "stateSource": "hook",
       "since": 1763249910,
@@ -120,6 +232,7 @@
       "title": "codex-helper",
       "directory": "/Users/me/repos/shinphony",
       "agent": "codex",
+      "kind": "agent",
       "state": "approval",
       "stateSource": "hook",
       "since": 1763249960,
@@ -150,6 +263,7 @@
       "title": "pi-helper",
       "directory": "/Users/me/repos/shinphony",
       "agent": "pi",
+      "kind": "agent",
       "state": "idle",
       "stateSource": "mux",
       "since": 1763249400,
@@ -168,6 +282,60 @@
       }
     },
     {
+      "id": "c_5f3d04f175c86689",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "claude-pane",
+      "directory": "/Users/me/repos/shinphony",
+      "agent": "claude",
+      "kind": "agent",
+      "state": "working",
+      "stateSource": "hook",
+      "since": 1763249950,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "claude",
+        "thread": "",
+        "title": "claude-pane",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "claude-pane",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
+      "id": "c_d331350cd7e480c0",
+      "mux": "tmux",
+      "group": {
+        "kind": "tmuxSession",
+        "name": "work"
+      },
+      "title": "codex-pane",
+      "directory": "/Users/me/repos/laclune",
+      "agent": "codex",
+      "kind": "agent",
+      "state": "working",
+      "stateSource": "mux",
+      "since": 1763249990,
+      "message": "",
+      "route": {
+        "version": 1,
+        "agent": "codex",
+        "thread": "",
+        "title": "codex-pane",
+        "multiplexer": "tmux",
+        "session": "work",
+        "window": "codex-pane",
+        "route": "",
+        "binary": ""
+      }
+    },
+    {
       "id": "c_282e6a21a0bff018",
       "mux": "tmux",
       "group": {
@@ -177,8 +345,9 @@
       "title": "editor",
       "directory": "/Users/me/repos/shinphony",
       "agent": null,
-      "state": "working",
-      "stateSource": "mux",
+      "kind": "shell",
+      "state": "idle",
+      "stateSource": "none",
       "since": 1763249970,
       "message": "",
       "route": {
@@ -203,8 +372,9 @@
       "title": "logs",
       "directory": "/var/log",
       "agent": null,
+      "kind": "shell",
       "state": "idle",
-      "stateSource": "mux",
+      "stateSource": "none",
       "since": 1763242800,
       "message": "",
       "route": {

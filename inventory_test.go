@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -106,11 +107,17 @@ func tmuxLineOn(socket, session string, index int, window, activity, pane, cwd, 
 // ---------------------------------------------------------------------------
 
 func TestInventoryFixtureAllStates(t *testing.T) {
+	// Every state the App may have to draw, hook-sourced and coarse: the tracker's
+	// own states, herdr's words (working/done/idle/blocked/error), a known agent
+	// herdr never reported a status for, a plain shell, and a tmux pane whose hook
+	// state is what makes it an agent row.
 	sources := inventoryFixtureSources{
 		stdout: map[string][]byte{
 			"tmux": []byte(strings.Join([]string{
 				tmuxLine("work", 0, "editor", "1763249970", "%1", "/Users/me/repos/shinphony", "zsh"),
 				tmuxLine("work", 1, "logs", "1763242800", "%2", "/var/log", "tail"),
+				tmuxLine("work", 2, "codex-pane", "1763249990", "%3", "/Users/me/repos/laclune", "codex"),
+				tmuxLine("work", 3, "claude-pane", "1763243000", "%4", "/Users/me/repos/shinphony", "zsh"),
 			}, "\n") + "\n"),
 		},
 		hc: hcListing{Session: "default", Terminals: []hcTerminal{
@@ -120,12 +127,18 @@ func TestInventoryFixtureAllStates(t *testing.T) {
 			hcRow("t4", "pi-helper", "", "pi", "idle", "/Users/me/repos/shinphony", "Shinphony / 1", inventoryNow*1000-9000000, inventoryNow*1000-600000),
 			hcRow("t5", "codex-old", "", "codex", "done", "/Users/me/repos/other", "Other / 1", inventoryNow*1000-3000000, inventoryNow*1000-30000),
 			hcRow("t6", "", "", "", "", "/tmp", "", inventoryNow*1000-8000000, 0),
+			// herdr's own words, no hook in sight.
+			hcStatus("t7", "herdr-blocked", "codex", "blocked", "question", "Allow bash?", "/Users/me/repos/shinphony", 15),
+			hcStatus("t8", "herdr-error", "antigravity", "error", "", "", "/Users/me/repos/laclune", 25),
+			hcStatus("t9", "herdr-done", "codex", "done", "", "", "/Users/me/repos/shinphony", 35),
+			hcStatus("t10", "codex-nostatus", "codex", "", "", "", "/Users/me/repos/shinphony", 0),
 		}},
 		states: []trackedConversation{
 			{Agent: "claude", Mux: "hc", HcAddress: "t1", Project: "shinphony", State: "question", Message: "Which branch?", Since: inventoryNow - 90, Seen: inventoryNow - 10},
 			{Agent: "codex", Mux: "hc", HcAddress: "t2", Project: "shinphony", State: "approval", Message: "Allow bash?", Since: inventoryNow - 40, Seen: inventoryNow - 10},
 			{Agent: "agy", Mux: "hc", Project: "laclune", State: "failed", Since: inventoryNow - 200, Seen: inventoryNow - 20},
 			{Agent: "codex", Mux: "hc", HcAddress: "t5", Project: "other", State: "done", Since: inventoryNow - 3600, Seen: inventoryNow - 30},
+			{Agent: "claude", Mux: "tmux", Pane: "%4", TmuxSocket: "/tmp/tmux-501/default", Project: "shinphony", State: "working", Since: inventoryNow - 50, Seen: inventoryNow - 45},
 		},
 	}
 	checkInventoryFixture(t, "all-states.json", buildInventory(context.Background(), sources.options()))
@@ -138,6 +151,8 @@ func TestInventoryFixtureEachMux(t *testing.T) {
 				tmuxLine("work", 0, "editor", "1763249970", "%1", "/Users/me/repos/shinphony", "codex"),
 				"this line is not a window",
 				tmuxLine("work", 1, "logs", "1763242800", "%2", "/var/log", "tail"),
+				// Output a second ago is not work: a shell is quiet.
+				tmuxLine("work", 2, "busy-shell", "1763249995", "%3", "/Users/me/repos/shinphony", "zsh"),
 			}, "\n") + "\n"),
 			"zellij": []byte("dev\nops\n"),
 			"screen": []byte("There are screens on:\n\t12345.pts-0.host\t(Detached)\n2 Sockets in /tmp/screens.\n"),
@@ -175,10 +190,12 @@ func TestInventoryFixtureTruncation(t *testing.T) {
 	var windows []string
 	for i := 0; i < 210; i++ {
 		activity := itoa(1763150000 - i) // old output: idle, older for larger i
+		command := "zsh"                 // a shell: quiet, and dropped first
 		if i < 5 {
 			activity = "1763249990" // a turn that just ran
+			command = "codex"       // an agent at work: it must survive the limit
 		}
-		windows = append(windows, tmuxLine("work", i, "w"+itoa(i), activity, "%"+itoa(100+i), "/Users/me/repos/trunc", "zsh"))
+		windows = append(windows, tmuxLine("work", i, "w"+itoa(i), activity, "%"+itoa(100+i), "/Users/me/repos/trunc", command))
 	}
 	sources := inventoryFixtureSources{
 		stdout: map[string][]byte{"tmux": []byte(strings.Join(windows, "\n") + "\n")},
@@ -265,17 +282,8 @@ func TestInventoryFixturesMatchContract(t *testing.T) {
 			if !muxes[c.Mux] || !states[c.State] {
 				t.Fatalf("%s: bad mux/state %q/%q", entry.Name(), c.Mux, c.State)
 			}
-			if c.StateSource != "hook" && c.StateSource != "mux" && c.StateSource != "none" {
-				t.Fatalf("%s: bad stateSource %q", entry.Name(), c.StateSource)
-			}
-			if len([]rune(c.Message)) > 120 || len([]rune(c.Title)) > 120 {
-				t.Fatalf("%s: title/message too long", entry.Name())
-			}
-			if (c.State == "question" || c.State == "approval") && c.StateSource != "hook" {
-				t.Fatalf("%s: %s from %s", entry.Name(), c.State, c.StateSource)
-			}
-			if c.Route.Version != 1 || c.Route.Multiplexer != c.Mux {
-				t.Fatalf("%s: route does not describe the row: %+v", entry.Name(), c.Route)
+			if err = checkInventoryContractRow(c, seen); err != nil {
+				t.Fatalf("%s: %v", entry.Name(), err)
 			}
 			if c.Parent != "" {
 				// The parent must be a row in this document, never dangling.
@@ -293,41 +301,77 @@ func TestInventoryFixturesMatchContract(t *testing.T) {
 	}
 }
 
+// checkInventoryContractRow is one row's share of the contract, used by the
+// fixture check and by the tests that pin a single rule. `ids` is every id the
+// document already carries (for the duplicate check).
+func checkInventoryContractRow(c inventoryConversation, ids map[string]bool) error {
+	if c.StateSource != "hook" && c.StateSource != "mux" && c.StateSource != "none" {
+		return fmt.Errorf("bad stateSource %q", c.StateSource)
+	}
+	if len([]rune(c.Message)) > 120 || len([]rune(c.Title)) > 120 {
+		return errors.New("title/message too long")
+	}
+	// "Needs you" comes from a hook, or from herdr's own `blocked` (an hc row
+	// whose program is waiting for the user). An approval is only ever a hook:
+	// no multiplexer can tell that a program is asking permission.
+	if c.State == "approval" && c.StateSource != "hook" {
+		return fmt.Errorf("approval from %s", c.StateSource)
+	}
+	if c.State == "question" && c.StateSource != "hook" && c.Mux != "hc" {
+		return fmt.Errorf("question from %s on %s", c.StateSource, c.Mux)
+	}
+	// `kind` is exactly "an agent identity is present", spelled for the App.
+	if c.Kind != "agent" && c.Kind != "shell" {
+		return fmt.Errorf("bad kind %q", c.Kind)
+	}
+	if (c.Kind == "agent") != (c.Agent != nil) {
+		return fmt.Errorf("kind %q with agent %v", c.Kind, c.Agent)
+	}
+	if c.Kind == "shell" && c.State == "working" {
+		return errors.New("a shell said working")
+	}
+	if c.Route.Version != 1 || c.Route.Multiplexer != c.Mux {
+		return fmt.Errorf("route does not describe the row: %+v", c.Route)
+	}
+	return nil
+}
+
 // ---------------------------------------------------------------------------
 // State rules.
 // ---------------------------------------------------------------------------
 
-func TestInventoryMuxStateNeverNeedsYou(t *testing.T) {
+func TestInventoryHerdrWordsSurvive(t *testing.T) {
 	now := inventoryClock()
-	for _, tc := range []struct{ state, want string }{
-		{"working", "working"},
-		{"blocked", "idle"},
-		{"done", "idle"},
-		{"idle", "idle"},
-		{"", "unknown"},
+	for _, tc := range []struct{ app, state, want, source string }{
+		{"codex", "working", "working", "mux"},
+		{"codex", "done", "done", "mux"},
+		{"codex", "idle", "idle", "mux"},
+		{"codex", "blocked", "question", "mux"},
+		{"codex", "error", "failed", "mux"},
+		// A recognised agent whose status is null has told us nothing yet.
+		{"codex", "", "unknown", "none"},
+		// A plain shell is quiet; herdr said nothing about it.
+		{"", "", "idle", "none"},
 	} {
-		app := "codex"
-		if tc.state == "" {
-			app = "" // the core reports status null: nothing is known yet
-		}
 		sources := inventoryFixtureSources{hc: hcListing{Session: "default", Terminals: []hcTerminal{
-			hcRow("t1", "a", "", app, tc.state, "/tmp", "", inventoryNow*1000-900000, inventoryNow*1000-600000),
+			hcRow("t1", "a", "", tc.app, tc.state, "/tmp", "", inventoryNow*1000-900000, inventoryNow*1000-600000),
 		}}}
 		inv := buildInventory(context.Background(), sources.options())
 		if len(inv.Conversations) != 1 {
-			t.Fatalf("%q: got %d rows", tc.state, len(inv.Conversations))
+			t.Fatalf("%q/%q: got %d rows", tc.app, tc.state, len(inv.Conversations))
 		}
 		c := inv.Conversations[0]
-		if c.State != tc.want {
-			t.Fatalf("hc %q → %s, want %s", tc.state, c.State, tc.want)
+		if c.State != tc.want || c.StateSource != tc.source {
+			t.Fatalf("hc %q/%q → %s/%s, want %s/%s", tc.app, tc.state, c.State, c.StateSource, tc.want, tc.source)
 		}
-		if c.State == "question" || c.State == "approval" {
-			t.Fatalf("hc %q became %s", tc.state, c.State)
+		// The status change is the row's clock; a terminal herdr never reported a
+		// status for only has its creation.
+		wantSince := now.Unix() - 600
+		if tc.state == "" && tc.app == "" {
+			wantSince = now.Unix() - 900
 		}
-		// A terminal with no status is "unknown" from observation, and its
-		// creation is the only clock it has.
-		if tc.state == "" && (c.StateSource != "none" || c.Since != now.Unix()-900) {
-			t.Fatalf("no status: stateSource %s since %d", c.StateSource, c.Since)
+		if c.Since != wantSince {
+			t.Fatalf("hc %q/%q: since %d, want %d", tc.app, tc.state, c.Since, wantSince)
 		}
 	}
 }
@@ -344,13 +388,16 @@ func TestInventoryRecentActivityIsWorking(t *testing.T) {
 		}, "\n") + "\n")},
 	}
 	inv := buildInventory(context.Background(), sources.options())
-	want := map[string]string{"recent": "working", "quiet": "idle", "hot": "working", "cold": "idle"}
+	// Herdr's `done` is herdr's own word now; a tmux pane says working only for a
+	// program that is an agent — a shell's output is not work.
+	want := map[string]struct{ state, source string }{
+		"recent": {"done", "mux"}, "quiet": {"done", "mux"},
+		"hot": {"idle", "none"}, "cold": {"idle", "none"},
+	}
 	for _, c := range inv.Conversations {
-		if got := want[c.Title]; got != c.State {
-			t.Fatalf("%s: %s, want %s", c.Title, c.State, got)
-		}
-		if c.StateSource != "mux" {
-			t.Fatalf("%s: stateSource %s", c.Title, c.StateSource)
+		w := want[c.Title]
+		if c.State != w.state || c.StateSource != w.source {
+			t.Fatalf("%s: %s/%s, want %s/%s", c.Title, c.State, c.StateSource, w.state, w.source)
 		}
 	}
 }

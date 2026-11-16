@@ -66,6 +66,7 @@ func run() error {
 	flags := flag.NewFlagSet(commandName, flag.ContinueOnError)
 	dir := flags.String("state-dir", filepath.Join(home, stateDirectoryName), "private local state directory")
 	creds := flags.String("credentials-dir", filepath.Join(home, credentialsDirectoryName), "existing private pairing directory")
+	minSequence := flags.Int64("min-sequence", 0, "update now when the installed release sequence is below this")
 	if err = flags.Parse(os.Args[1:]); err != nil {
 		return err
 	}
@@ -119,7 +120,11 @@ func run() error {
 		return debugHcCapture(os.Stdout, args[1], status)
 	}
 	if len(args) > 2 || (len(args) == 2 && args[0] != "setup-status" && args[0] != "setup-latest" && args[0] != "attach-event" && args[0] != "attach-recent" && args[0] != "resolve-event") {
-		return errors.New("usage: " + commandName + " [flags] init|install-service|uninstall-service|serve|status|doctor|event|sessions|inventory|version")
+		// check-update is the one command with its own arguments (--min-sequence N);
+		// it validates them itself.
+		if !(len(args) > 0 && args[0] == "check-update") {
+			return errors.New("usage: " + commandName + " [flags] init|install-service|uninstall-service|serve|status|doctor|event|sessions|inventory|version")
+		}
 	}
 	if args[0] == "version" {
 		fmt.Println(version)
@@ -164,7 +169,11 @@ func run() error {
 		return explicitTaskEvent(*dir, os.Stdin)
 	}
 	if args[0] == "check-update" {
-		return checkUpdate(*dir, *creds)
+		min, e := checkUpdateMinSequence(args[1:], *minSequence)
+		if e != nil {
+			return e
+		}
+		return checkUpdate(*dir, *creds, min)
 	}
 	if args[0] == "configure-updates" {
 		return configureUpdates(*dir, os.Stdin)

@@ -168,13 +168,13 @@ func TestUpdateCooldownAndDisabled(t *testing.T) {
 	if err := prepareDir(ud); err != nil {
 		t.Fatal(err)
 	}
-	if err := checkUpdate(dir, dir); err == nil {
+	if err := checkUpdate(dir, dir, 0); err == nil {
 		t.Fatal("missing trust root accepted")
 	}
 	p := updatePolicy{}
 	b, _ := json.Marshal(p)
 	os.WriteFile(filepath.Join(ud, "policy.json"), b, 0600)
-	if err := checkUpdate(dir, dir); err == nil || err.Error() != "automatic_updates_disabled" {
+	if err := checkUpdate(dir, dir, 0); err == nil || err.Error() != "automatic_updates_disabled" {
 		t.Fatal(err)
 	}
 	p.Enabled = true
@@ -184,7 +184,7 @@ func TestUpdateCooldownAndDisabled(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i := 0; i < 20; i++ {
-		if err := checkUpdate(dir, dir); err != nil {
+		if err := checkUpdate(dir, dir, 0); err != nil {
 			t.Fatal("cooldown should avoid all network", err)
 		}
 	}
@@ -200,5 +200,60 @@ func TestUninstallTombstoneBlocksAutomaticApply(t *testing.T) {
 	}
 	if err := startUpdate(dir, dir); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// `check-update --min-sequence N` is the App's "your Hook is old" lever: below N
+// it must not wait for the hourly cooldown, at or above N it behaves as today.
+func TestUpdateDueHonoursMinSequence(t *testing.T) {
+	now := time.Unix(1794756000, 0).UTC()
+	soon := updateState{State: "checking", NextCheck: now.Unix() + 3600}
+	for _, tc := range []struct {
+		name string
+		s    updateState
+		min  int64
+		want bool
+	}{
+		{"no-cooldown", updateState{}, 0, true},
+		{"cooldown", soon, 0, false},
+		{"cooldown-min-above-installed", soon, sequence() + 1, true},
+		{"cooldown-min-equal-installed", soon, sequence(), false},
+		{"cooldown-min-below-installed", soon, -1, false},
+	} {
+		if got := updateDue(tc.s, tc.min, now); got != tc.want {
+			t.Fatalf("%s: %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}
+
+// The flag is new: the position the App uses (`check-update --min-sequence N`)
+// must parse, and so must the flag-before-command form the Go flag package
+// accepts for every other option. Anything else is a usage error, never a
+// silently ignored typo on a command that changes the installed binary.
+func TestCheckUpdateArgs(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		args []string
+		pre  int64
+		want int64
+		err  bool
+	}{
+		{"plain", nil, 0, 0, false},
+		{"space", []string{"--min-sequence", "2026111601"}, 0, 2026111601, false},
+		{"equals", []string{"--min-sequence=2026111601"}, 0, 2026111601, false},
+		{"flag-given-twice", []string{"--min-sequence", "5"}, 7, 5, false},
+		{"empty", []string{"--min-sequence"}, 0, 0, true},
+		{"garbage", []string{"--min-sequence", "next"}, 0, 0, true},
+		{"negative", []string{"--min-sequence", "-3"}, 0, 0, true},
+		{"unknown-flag", []string{"--force"}, 0, 0, true},
+		{"stray-word", []string{"now"}, 0, 0, true},
+	} {
+		got, err := checkUpdateMinSequence(tc.args, tc.pre)
+		if (err != nil) != tc.err {
+			t.Fatalf("%s: err %v, want error %v", tc.name, err, tc.err)
+		}
+		if !tc.err && got != tc.want {
+			t.Fatalf("%s: %d, want %d", tc.name, got, tc.want)
+		}
 	}
 }

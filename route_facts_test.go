@@ -178,8 +178,8 @@ func TestInventoryClaudeEventLandsOnItsPane(t *testing.T) {
 		t.Fatalf("claude approval: %+v", d)
 	}
 	windows := strings.Join([]string{
-		tmuxLineOn("/tmp/tmux-1000/default", "work", 0, "editor", "1763249990", "%2", "/Users/me/repos/shinphony", "zsh"),
-		tmuxLineOn("/tmp/tmux-1000/default", "work", 1, "tests", "1763249990", "%3", "/Users/me/repos/shinphony", "zsh"),
+		tmuxLineOn("/tmp/tmux-1000/default", "work", 0, "editor", "1763249990", "%2", "/Users/me/repos/shinphony", "codex"),
+		tmuxLineOn("/tmp/tmux-1000/default", "work", 1, "tests", "1763249990", "%3", "/Users/me/repos/shinphony", "codex"),
 	}, "\n") + "\n"
 	inv := buildInventory(context.Background(), inventoryFixtureSources{
 		stdout: map[string][]byte{"tmux": []byte(windows)},
@@ -209,7 +209,7 @@ func TestInventoryClaudeEventLandsOnItsPane(t *testing.T) {
 // would shadow its own pane for a day.
 func TestInventoryNewestSessionOwnsThePane(t *testing.T) {
 	now := inventoryClock()
-	windows := tmuxLineOn("/tmp/tmux-1000/default", "work", 0, "editor", "1763249990", "%3", "/Users/me/repos/shinphony", "zsh") + "\n"
+	windows := tmuxLineOn("/tmp/tmux-1000/default", "work", 0, "editor", "1763249990", "%3", "/Users/me/repos/shinphony", "codex") + "\n"
 	states := []trackedConversation{
 		{Agent: "claude", Mux: "tmux", Pane: "%3", TmuxSocket: "/tmp/tmux-1000/default", Project: "shinphony", State: "question", Message: "old", Since: now.Unix() - 7200, Seen: now.Unix() - 7100},
 		{Agent: "codex", Mux: "tmux", Pane: "%3", TmuxSocket: "/tmp/tmux-1000/default", Project: "shinphony", State: "working", Since: now.Unix() - 60, Seen: now.Unix() - 10},
@@ -250,7 +250,8 @@ func TestInventoryRouteFactsSkipTheProjectFallback(t *testing.T) {
 		},
 		now: now,
 	}
-	if c := buildInventory(context.Background(), sources.options()).Conversations[0]; c.StateSource != "mux" {
+	// The pane keeps its own coarse state: a shell with nothing joined is quiet.
+	if c := buildInventory(context.Background(), sources.options()).Conversations[0]; c.StateSource != "none" || c.State != "idle" {
 		t.Fatalf("a stale route fell back to the project: %s/%s", c.State, c.StateSource)
 	}
 	// Without route facts (an old hook binary, or no multiplexer) the fallback

@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/theupdateframework/go-tuf/v2/metadata"
@@ -228,7 +229,12 @@ func verifiedUpdateWithClient(ctx context.Context, dir string, p updatePolicy, c
 
 // Run from an SSH-launched helper, NOT inside the service's cgroup: stopping the
 // service must not kill its updater. Independent OS lock coalesces many logins.
-func checkUpdate(dir, creds string) error {
+//
+// minSequence is the App's lever for a Hook too old to serve what it needs
+// (`check-update --min-sequence N`): while the installed sequence is below it the
+// hourly cooldown is skipped, so the next SSH session updates now. At or above it
+// the cooldown and every other rule stay exactly as they were.
+func checkUpdate(dir, creds string, minSequence int64) error {
 	ud := filepath.Join(dir, "updates")
 	if err := prepareDir(ud); err != nil {
 		return err
@@ -249,7 +255,7 @@ func checkUpdate(dir, creds string) error {
 	if err = readPrivateJSON(filepath.Join(ud, "state.json"), &s); err != nil && !os.IsNotExist(err) {
 		return errors.New("invalid_update_state")
 	}
-	if s.NextCheck > time.Now().Unix() {
+	if !updateDue(s, minSequence, time.Now()) {
 		return json.NewEncoder(os.Stdout).Encode(s)
 	}
 	// Persist cooldown before any network request. A killed SSH process cannot
@@ -308,6 +314,45 @@ func checkUpdate(dir, creds string) error {
 		return err
 	}
 	return json.NewEncoder(os.Stdout).Encode(s)
+}
+
+// updateDue decides whether this run may talk to the network. The cooldown is
+// what keeps every SSH login from re-checking; an explicit minimum sequence
+// outranks it while the installed binary is genuinely older.
+func updateDue(s updateState, minSequence int64, now time.Time) bool {
+	if minSequence > 0 && sequence() < minSequence {
+		return true
+	}
+	return s.NextCheck <= now.Unix()
+}
+
+// checkUpdateMinSequence reads the optional `--min-sequence N` that follows the
+// check-update command. The command itself is the first positional argument, so
+// the Go flag package (which stops at the first non-flag) never sees a flag after
+// it; the flagset flag of the same name covers the flag-before-command form.
+func checkUpdateMinSequence(args []string, fallback int64) (int64, error) {
+	min := fallback
+	for i := 0; i < len(args); i++ {
+		value := ""
+		switch {
+		case args[i] == "--min-sequence":
+			if i+1 >= len(args) {
+				return 0, errors.New("invalid_min_sequence")
+			}
+			value = args[i+1]
+			i++
+		case strings.HasPrefix(args[i], "--min-sequence="):
+			value = strings.TrimPrefix(args[i], "--min-sequence=")
+		default:
+			return 0, errors.New("usage: check-update [--min-sequence N]")
+		}
+		n, err := strconv.ParseInt(value, 10, 64)
+		if err != nil || n <= 0 {
+			return 0, errors.New("invalid_min_sequence")
+		}
+		min = n
+	}
+	return min, nil
 }
 
 func updateBuildInfo() error {

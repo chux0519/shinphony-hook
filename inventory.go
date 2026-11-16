@@ -35,10 +35,12 @@ const (
 	// maxInventoryConversations bounds a document; the oldest idle rows go first.
 	maxInventoryConversations = 200
 	// muxActiveSeconds is how recent a multiplexer's last activity must be for a
-	// coarse row to say "working". There is no exact time outside the hook, and a
-	// coarse row never says "needs you".
+	// coarse row to say "working". There is no exact time outside the hook. Only
+	// herdr's own `blocked` may say "needs you" from a coarse source; tmux output
+	// never does.
 	muxActiveSeconds = 60
-	// doneStateDecay turns a finished turn into quiet after a day.
+	// doneStateDecay turns a finished turn into quiet after a day, from whichever
+	// source says done: the agent's own hook or herdr's own status.
 	doneStateDecay = 24 * time.Hour
 	// trackedStateFreshness bounds how old a tracker session may be and still be
 	// joined to a live row: a stale session must not label somebody else's tab.
@@ -70,12 +72,16 @@ type inventoryRoute struct {
 }
 
 type inventoryConversation struct {
-	ID          string         `json:"id"`
-	Mux         string         `json:"mux"`
-	Group       inventoryGroup `json:"group"`
-	Title       string         `json:"title"`
-	Directory   string         `json:"directory"`
-	Agent       *string        `json:"agent"`
+	ID        string         `json:"id"`
+	Mux       string         `json:"mux"`
+	Group     inventoryGroup `json:"group"`
+	Title     string         `json:"title"`
+	Directory string         `json:"directory"`
+	Agent     *string        `json:"agent"`
+	// Kind is "agent" when a conversation carries an agent identity and "shell"
+	// when it is a plain terminal. It is exactly `agent != null`, spelled out so
+	// the App can group shells without inferring the rule (schema stays 1).
+	Kind        string         `json:"kind"`
 	State       string         `json:"state"`
 	StateSource string         `json:"stateSource"`
 	Since       int64          `json:"since"`
@@ -225,6 +231,7 @@ func (r inventoryRow) conversation() inventoryConversation {
 		Mux:         r.mux,
 		Group:       inventoryGroup{Kind: r.groupKind, Name: excerpt(r.groupName, 80, false)},
 		Title:       excerpt(r.title, 120, false),
+		Kind:        "shell",
 		State:       r.state,
 		StateSource: r.stateSource,
 		Since:       r.since,
@@ -238,6 +245,7 @@ func (r inventoryRow) conversation() inventoryConversation {
 	if r.agent != "" {
 		agent := r.agent
 		c.Agent = &agent
+		c.Kind = "agent"
 	}
 	return c
 }
@@ -285,10 +293,10 @@ func hcRows(list hcListing, now time.Time) []inventoryRow {
 			continue
 		}
 		seen[t.Address] = true
-		state, source, since := hcRowState(t, now)
+		state, source, message, since := hcRowState(t, now)
 		row := inventoryRow{
 			mux: "hc", title: hcTitle(t), directory: t.Cwd, agent: agentFromName(hcString(t.Status, "app")),
-			state: state, stateSource: source, since: since,
+			state: state, stateSource: source, message: message, since: since,
 			sessionName: cleanLabel(t.Name, 80), windowName: t.Address,
 			idSession: list.Session, idWindow: t.Address, hcSession: list.Session,
 			hcAddress: t.Address, parentAddress: t.Parent, space: hcSpace(t),
@@ -305,22 +313,63 @@ func hcRows(list hcListing, now time.Time) []inventoryRow {
 	return rows
 }
 
-// hcRowState is the coarse mapping the design allows: only "working" is exact,
-// and nothing here may ever say question or approval.
-func hcRowState(t hcTerminal, now time.Time) (state, source string, since int64) {
+// hcRowState maps herdr's own status (herdr_core status: idle, working, done,
+// blocked, error) to the inventory's vocabulary at full fidelity. A coarse row
+// is what the multiplexer knows, and herdr knows the program's own word, so
+// flattening `done` to `idle` hid a finished turn and `blocked` to `idle` hid a
+// program waiting for the user.
+//
+//	| herdr status.state | inventory state          | stateSource |
+//	| working            | working                  | mux         |
+//	| done               | done, idle after 24 h    | mux         |
+//	| idle               | idle                     | mux         |
+//	| blocked            | question + status.msg    | mux         |
+//	| error              | failed                   | mux         |
+//	| any other word     | activity (60 s) of it    | mux         |
+//	| no status at all   | unknown for an agent,    | none        |
+//	|                    | idle for a plain shell   |             |
+//
+// `blocked` is the only "needs you" a coarse row may say — the App's own
+// convention, and herdr says it only when the program asked something
+// (status.kind: permission, question or auth). `approval` stays hook-only.
+func hcRowState(t hcTerminal, now time.Time) (state, source, message string, since int64) {
 	since = now.Unix()
 	if t.StatusMS > 0 {
 		since = t.StatusMS / 1000
 	} else if t.CreatedMS > 0 {
 		since = t.CreatedMS / 1000
 	}
-	switch hcString(t.Status, "state") {
+	switch word := hcString(t.Status, "state"); word {
 	case "working":
-		return "working", "mux", since
-	case "blocked", "done", "idle", "failed":
-		return activityState(now, since), "mux", since
+		return "working", "mux", "", since
+	case "done":
+		return settledDone(now, since), "mux", "", since
+	case "idle":
+		return "idle", "mux", "", since
+	case "blocked":
+		return "question", "mux", excerpt(hcString(t.Status, "msg"), 120, false), since
+	case "error":
+		return "failed", "mux", "", since
+	case "":
+		// Nothing was reported: an agent we recognise has told us nothing yet, a
+		// plain shell is quiet. Never "working" — herdr said nothing of the kind.
+		if agentFromName(hcString(t.Status, "app")) == "" {
+			return "idle", "none", "", since
+		}
+		return "unknown", "none", "", since
 	}
-	return "unknown", "none", since
+	// A word this build does not know (a newer herdr): fall back to the coarse
+	// activity of the status change instead of inventing a state.
+	return activityState(now, since), "mux", "", since
+}
+
+// settledDone is done for a day and quiet afterwards, on the clock of whichever
+// source said done.
+func settledDone(now time.Time, since int64) string {
+	if since > 0 && now.Unix()-since >= int64(doneStateDecay/time.Second) {
+		return "idle"
+	}
+	return "done"
 }
 
 func activityState(now time.Time, since int64) string {
@@ -398,10 +447,18 @@ func parseTmuxWindows(raw []byte, now time.Time) []inventoryRow {
 		if title == "" {
 			title = session
 		}
+		agent := agentFromName(command)
+		state, source := activityState(now, since), "mux"
+		if agent == "" {
+			// A foreground program that is not an agent is a shell: output proves
+			// something ran, not that an agent is working. Quiet, and with no state
+			// source, until a hook says otherwise (a hook then sets the agent too).
+			state, source = "idle", "none"
+		}
 		rows = append(rows, inventoryRow{
 			mux: "tmux", groupKind: "tmuxSession", groupName: session,
-			title: title, directory: cwd, agent: agentFromName(command),
-			state: activityState(now, since), stateSource: "mux", since: since,
+			title: title, directory: cwd, agent: agent,
+			state: state, stateSource: source, since: since,
 			sessionName: session, windowName: windowName,
 			idSession: sessionID, idWindow: windowID,
 			pane: pane, tmuxSocket: socket,
@@ -467,12 +524,12 @@ func screenRows(ctx context.Context, o inventoryOptions, now time.Time, inv *inv
 	return rows
 }
 
-// zellijRow is a plain row: the multiplexer proves a session exists, nothing
-// about the agent in it.
+// zellijRow is a plain row: the multiplexer proves a shell exists and nothing
+// about what runs in it, so it is quiet rather than unknown-or-working.
 func zellijRow(mux, name string, now time.Time) inventoryRow {
 	return inventoryRow{
 		mux: mux, groupKind: "other", title: name,
-		state: "unknown", stateSource: "none", since: now.Unix(),
+		state: "idle", stateSource: "none", since: now.Unix(),
 		sessionName: name, idSession: name,
 	}
 }
@@ -680,7 +737,17 @@ func inventoryCLI(dir string, w io.Writer) error {
 		_, err = w.Write(raw)
 		return err
 	}
-	return json.NewEncoder(w).Encode(buildInventory(ctx, realInventoryOptions(nil, time.Now())))
+	return json.NewEncoder(w).Encode(inventoryFallback(ctx, realInventoryOptions(nil, time.Now())))
+}
+
+// inventoryFallback is the mux-only document: every row is coarse because the
+// daemon (the only process holding the tracker's state) did not answer. The
+// document says so, so "every row is stateSource mux" is explainable instead of
+// looking like a broken join.
+func inventoryFallback(ctx context.Context, o inventoryOptions) inventory {
+	inv := buildInventory(ctx, o)
+	inv.Errors = append([]string{"daemon_unavailable"}, inv.Errors...)
+	return inv
 }
 
 func fetchInventory(ctx context.Context, dir string) ([]byte, error) {

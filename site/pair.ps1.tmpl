@@ -14,6 +14,18 @@ $ProgressPreference = 'SilentlyContinue'
 # lives in one script block so a `return` leaves only this setup.
 function Stop-Setup($message) { throw ('shinphony_setup_stopped: ' + $message) }
 
+# Windows PowerShell 5.1 (.NET Framework) has GetAccessControl/SetAccessControl
+# on DirectoryInfo; PowerShell 7 (.NET) only has them as FileSystemAclExtensions
+# static methods. Both take the same sections, so the access-only write is the same.
+function Get-FolderAcl($folder, $sections) {
+  if ($folder.PSObject.Methods['GetAccessControl']) { return $folder.GetAccessControl($sections) }
+  return [System.IO.FileSystemAclExtensions]::GetAccessControl($folder, [System.Security.AccessControl.AccessControlSections]$sections)
+}
+function Set-FolderAcl($folder, $acl) {
+  if ($folder.PSObject.Methods['SetAccessControl']) { $folder.SetAccessControl($acl); return }
+  [System.IO.FileSystemAclExtensions]::SetAccessControl($folder, $acl)
+}
+
 try {
 & {
 $windowsAmd64 = '@@WINDOWS_AMD64@@'
@@ -45,14 +57,14 @@ if ($dir.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
 # Who owns the folder decides whether this can go on. A non-elevated process
 # never changes an owner: that needs SeRestorePrivilege, and an owner it cannot
 # write is exactly what made the next run fail with SeSecurityPrivilege.
-$owner = $dir.GetAccessControl('Owner').GetOwner([System.Security.Principal.SecurityIdentifier])
+$owner = (Get-FolderAcl $dir 'Owner').GetOwner([System.Security.Principal.SecurityIdentifier])
 if ($owner.Value -ne $me.User.Value) {
   Stop-Setup ('The .shinphony-agent folder belongs to another account. ' + $repair)
 }
 # Access section only: no owner and no SACL is read or written, so this needs no
 # administrator rights. Entries for anyone else are dropped; the folder ends up
 # with one rule, for you.
-$acl = $dir.GetAccessControl('Access')
+$acl = Get-FolderAcl $dir 'Access'
 $acl.SetAccessRuleProtection($true, $false)
 foreach ($rule in @($acl.Access)) {
   $keep = $false
@@ -61,7 +73,7 @@ foreach ($rule in @($acl.Access)) {
 }
 $acl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new($me.User, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow'))
 try {
-  $dir.SetAccessControl($acl)
+  Set-FolderAcl $dir $acl
 } catch {
   Stop-Setup ('Could not set the permissions of the .shinphony-agent folder. ' + $repair)
 }

@@ -9,8 +9,8 @@ its own output against them byte for byte, so a change here is a contract change
 
 | File | What it pins |
 |---|---|
-| `all-states.json` | one row for each state: `question`, `approval`, `working`, `done`, `failed`, `idle`, `unknown` — hook- and mux-sourced, plus one hc helper with a parent |
-| `each-mux.json` | every mux the Hook emits: `hc`, `tmux`, `zellij`, `shell` (screen sessions are plain shell rows) |
+| `all-states.json` | one row for each state: `question`, `approval`, `working`, `done`, `failed`, `idle`, `unknown` — hook- and mux-sourced, herdr's own `done`/`blocked`/`error`, a known agent herdr has no status for, plain shells, and a tmux pane only a hook makes an agent row; plus one hc helper with a parent |
+| `each-mux.json` | every mux the Hook emits: `hc`, `tmux`, `zellij`, `shell` (screen sessions are plain shell rows), including a tmux shell whose output is one second old |
 | `hc-helpers.json` | helper → parent links by hc address, and an orphan whose parent is gone |
 | `errors.json` | a source that failed: codes only, no raw stderr, and no rows |
 | `truncation.json` | the 200-conversation limit: quiet rows go first, `since` oldest first, and a dropped parent leaves no dangling link |
@@ -29,9 +29,13 @@ go test -run Inventory -update-inventory .
 ```
 
 - `host` is empty: the App knows which host it asked over SSH.
-- `errors` is always present; codes are `hc_unavailable`, `tmux_unavailable`,
-  `zellij_unavailable`, `screen_unavailable`. A multiplexer with nothing to list
-  (no tmux server, `No Sockets found`, no zellij session) is not an error.
+- `errors` is always present; codes are `daemon_unavailable`, `hc_unavailable`,
+  `tmux_unavailable`, `zellij_unavailable`, `screen_unavailable`. A multiplexer
+  with nothing to list (no tmux server, `No Sockets found`, no zellij session) is
+  not an error. `daemon_unavailable` (first in the list) means the CLI could not
+  ask the service, which is the only process holding the tracker's in-memory
+  state: the rows are still valid, but **no** row can be `stateSource: hook`. It
+  explains a whole document of coarse rows instead of leaving it to be guessed.
 - At most 200 conversations. Truncation order: `unknown` first, then `idle`,
   `done`, `working`, `failed`, `question`, `approval`; inside a group the oldest
   `since` goes first.
@@ -46,12 +50,32 @@ go test -run Inventory -update-inventory .
   vocabulary but is not collected: the Hook has no machine-readable rex listing.
 - `group.kind` is `hcSpace` (with the hc space name), `tmuxSession` (with the
   session name) or `other` with an empty name.
+- `kind` is `agent` when the row carries an `agent` identity, `shell` when it is a
+  plain terminal. It is exactly `agent != null`, spelled out so the App can group
+  shells without inferring the rule (an App reading an older document treats a
+  missing `kind` as `agent` when `agent` is set).
 - `state` + `stateSource`:
   - `hook` is exact: the agent's own hook event. This is the only source that may
-    say `question` or `approval`, and the only one that knows `done`/`failed`.
-  - `mux` is coarse: `working` when the multiplexer's status or activity is
-    recent (60 s), otherwise `idle`.
-  - `none`: the multiplexer proved the conversation exists and nothing more.
+    say `approval`, and the only one that knows that an agent failed.
+  - `mux` is coarse, and from herdr it is herdr's own word (one row, one word):
+
+    | herdr `status.state` | `state` | note |
+    |---|---|---|
+    | `working` | `working` | |
+    | `done` | `done` | decays to `idle` after 24 h (from the status change) |
+    | `idle` | `idle` | |
+    | `blocked` | `question` | the program asked something (`status.kind`: permission/question/auth); `message` is its `status.msg` |
+    | `error` | `failed` | |
+    | any other word | activity of the status change | a newer herdr; 60 s rule |
+
+    tmux has no words of its own: a pane is `working` when its output is at most
+    60 s old *and* its program is a known agent, otherwise `idle`.
+  - `none`: the multiplexer proved the conversation exists and nothing more. A
+    shell (no agent identity, no hook state) is `idle`/`none`: output proves that
+    something ran, not that an agent is working, so a shell never says `working`.
+    A known agent herdr never reported a status for is `unknown`/`none`.
+  - `question` from `mux` is allowed on an hc row only (herdr's `blocked`), and
+    the App may show it as "Needs you"; a tmux/shell row never claims that.
   - `done` decays to `idle` after 24 h; `failed` stays until a new turn starts.
 - `since` is the last state change: the hook event, the hc status change (or the
   terminal's creation), the tmux window activity, or the observation time for a

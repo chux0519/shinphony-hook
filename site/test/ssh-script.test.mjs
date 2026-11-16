@@ -156,9 +156,9 @@ test('the setup scripts fix access rules only and never change the owner', () =>
   ]) {
     assert.equal(script.includes('Set-Acl'), false, `${name} must not use Set-Acl`);
     assert.equal(script.includes('SetOwner'), false, `${name} must never set an owner`);
-    assert.ok(script.includes("GetAccessControl('Access')"), `${name} reads the access section only`);
-    assert.ok(script.includes("GetAccessControl('Owner')"), `${name} reads the owner separately`);
-    assert.ok(script.includes('.SetAccessControl($acl)'), `${name} writes the access section back`);
+    assert.ok(script.includes("Get-FolderAcl $dir 'Access'"), `${name} reads the access section only`);
+    assert.ok(script.includes("Get-FolderAcl $dir 'Owner'"), `${name} reads the owner separately`);
+    assert.ok(script.includes('Set-FolderAcl $dir $acl') && script.includes('FileSystemAclExtensions'), `${name} writes the access section back`);
     // An unexpected owner is one sentence with the exact repair command.
     assert.ok(script.includes('belongs to another account'), `${name} explains a foreign owner`);
     assert.ok(script.includes('icacls "'), `${name} names icacls`);
