@@ -22,6 +22,11 @@ import (
 
 const version = "0.1.0-dev"
 
+// unsafeStateDirectory is the one error the state directory can produce, in the
+// CLI and in the background worker. Windows reads it back from the worker's log
+// to name the folder owner instead of a timeout (TF 160).
+const unsafeStateDirectory = "unsafe_state_directory"
+
 // hookKind reports the hook subcommand this invocation is running as. Every
 // agent gets its own name so the installed command decides the payload format.
 func hookKind(args []string) (string, bool) {
@@ -85,7 +90,7 @@ func run() error {
 	}
 	if len(args) == 3 && args[0] == "set" {
 		if err = prepareDir(*dir); err != nil {
-			return errors.New("unsafe_state_directory")
+			return errors.New(unsafeStateDirectory)
 		}
 		return setSetting(*dir, args[1], args[2])
 	}
@@ -163,7 +168,7 @@ func run() error {
 		return e
 	}
 	if err = prepareDir(*dir); err != nil {
-		return errors.New("unsafe_state_directory")
+		return errors.New(unsafeStateDirectory)
 	}
 	if args[0] == "task-event" {
 		return explicitTaskEvent(*dir, os.Stdin)

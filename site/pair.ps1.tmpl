@@ -56,9 +56,15 @@ if ($dir.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
 }
 # Who owns the folder decides whether this can go on. A non-elevated process
 # never changes an owner: that needs SeRestorePrivilege, and an owner it cannot
-# write is exactly what made the next run fail with SeSecurityPrivilege.
+# write is exactly what made the next run fail with SeSecurityPrivilege. An
+# elevated administrator process creates the folder owned by
+# BUILTIN\Administrators instead of by the user, which for an administrator
+# account is the same trust boundary (that account can take ownership anyway) and
+# which the helper hands back to the user when it runs elevated; a standard user
+# must still own the folder itself.
 $owner = (Get-FolderAcl $dir 'Owner').GetOwner([System.Security.Principal.SecurityIdentifier])
-if ($owner.Value -ne $me.User.Value) {
+$isAdmin = @($me.Groups | Where-Object { $_.Value -eq 'S-1-5-32-544' }).Count -gt 0
+if ($owner.Value -ne $me.User.Value -and -not ($isAdmin -and $owner.Value -eq 'S-1-5-32-544')) {
   Stop-Setup ('The .shinphony-agent folder belongs to another account. ' + $repair)
 }
 # Access section only: no owner and no SACL is read or written, so this needs no

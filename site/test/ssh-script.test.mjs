@@ -168,6 +168,26 @@ test('the setup scripts fix access rules only and never change the owner', () =>
   }
 });
 
+// TF 160: an elevated administrator process creates .shinphony-agent owned by
+// BUILTIN\Administrators, not by the user, and the scripts then refused the
+// folder as "another account" on the next run. For an administrator account that
+// owner is the same trust boundary, and the helper hands it back to the user; a
+// standard user's folder must still be its own, and neither script elevates to
+// change an owner.
+test('the setup scripts accept Administrators as the owner on an administrator account', () => {
+  for (const [name, script] of [
+    ['ssh.ps1', renderSSHPs1(TEMPLATE, VERIFIED, BASE)],
+    ['pair.ps1', renderPairPs1(PAIR_TEMPLATE, VERIFIED, BASE)],
+  ]) {
+    assert.ok(script.includes("@($me.Groups | Where-Object { $_.Value -eq 'S-1-5-32-544' })"), `${name} reads administrator membership from the token`);
+    assert.ok(script.includes("$isAdmin -and $owner.Value -eq 'S-1-5-32-544'"), `${name} accepts Administrators for an administrator`);
+    assert.ok(script.includes('$owner.Value -ne $me.User.Value'), `${name} still requires this account's own SID otherwise`);
+    // The decision stays in the owner check: no icacls run, no second elevation.
+    assert.equal(/icacls[^\n]*\|\s*(iex|Invoke)/.test(script), false, `${name} never runs icacls`);
+    assert.equal(script.split('-Verb RunAs').length - 1, 1, `${name} keeps one elevation`);
+  }
+});
+
 // The elevated window writes a log the normal window prints, and the log file
 // itself is created before elevation so it stays owned by the user.
 test('the elevated window keeps its errors and logs them for the normal window', () => {

@@ -51,14 +51,41 @@ func windowsIsAdministrator() bool {
 	return false
 }
 
+// windowsKeyDirectory is this account's key directory and file name. The
+// administrator branch never looks at home: an elevated step writes
+// administrators_authorized_keys under ProgramData\ssh and nothing in the
+// profile, which is the allowlist windowsElevatedWriteList pins for tests.
+func windowsKeyDirectory(administrator bool, home string) (dir, file string) {
+	if administrator {
+		return sshdConfigDirectory(), "administrators_authorized_keys"
+	}
+	return filepath.Join(home, ".ssh"), "authorized_keys"
+}
+
+// windowsElevatedWriteList is every path an elevated Hook step may create or
+// change: the shared administrator key file with its journal, lock and temp
+// files in ProgramData\ssh, plus the request and log files the non-elevated
+// pairing created before the prompt. Nothing under the user profile, and no
+// other file anywhere.
+func windowsElevatedWriteList(home, temp string) []string {
+	dir, file := windowsKeyDirectory(true, home)
+	return []string{
+		filepath.Join(dir, file),
+		filepath.Join(dir, ".shinphony-keys.json"),
+		filepath.Join(dir, ".shinphony-keys.lock"),
+		filepath.Join(dir, ".shinphony-key-<nonce>"),
+		filepath.Join(temp, "request.json"),
+		filepath.Join(temp, "elevated.log"),
+	}
+}
+
 // windowsKeyDirectoryForAccount is where this account's key goes: the
 // Administrators file lives in ProgramData\ssh, every other account in its own
 // .ssh directory.
 func windowsKeyDirectoryForAccount(home string) (dir, file string, admin bool) {
-	if windowsIsAdministrator() {
-		return sshdConfigDirectory(), "administrators_authorized_keys", true
-	}
-	return filepath.Join(home, ".ssh"), "authorized_keys", false
+	admin = windowsIsAdministrator()
+	dir, file = windowsKeyDirectory(admin, home)
+	return dir, file, admin
 }
 
 // describeKeyTarget is the file this account's key is installed into. It is

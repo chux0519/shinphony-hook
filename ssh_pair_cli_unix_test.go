@@ -299,6 +299,9 @@ func TestSSHPairServiceWarningNamesTheFailedStep(t *testing.T) {
 		{errServiceTaskRegister, "could not be registered"},
 		{errServiceTaskStart, "would not start"},
 		{errors.New("service_registered_but_not_ready: inspect service manager; uninstall-service preserves data"), "did not answer"},
+		// TF 160: the worker's own log said the state folder was rejected and the
+		// folder is owned by Administrators, so the line names the folder instead.
+		{errServiceFolderOwner, "owned by Administrators"},
 	}
 	for _, c := range cases {
 		line := sshPairServiceWarningLine(c.err)

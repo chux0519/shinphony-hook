@@ -69,6 +69,56 @@ func noReparse(path string) error {
 	}
 	return nil
 }
+
+// windowsPrivateOwnerAccepted reports whether an owner SID is acceptable for a
+// path only this account may use. An elevated administrator process creates
+// objects owned by BUILTIN\Administrators rather than by the user (that is the
+// default owner of an elevated token), so for an account that is itself an
+// administrator the group owner is the same trust boundary: such an account can
+// take ownership of anything anyway. A standard user's path must stay owned by
+// the user, and SYSTEM or another account never passes.
+func windowsPrivateOwnerAccepted(owner, account *windows.SID, administrator bool) bool {
+	if owner == nil || account == nil {
+		return false
+	}
+	if owner.Equals(account) {
+		return true
+	}
+	if !administrator {
+		return false
+	}
+	administrators, err := windowsAdministratorsSID()
+	return err == nil && owner.Equals(administrators)
+}
+
+// windowsAdoptPrivateOwner hands a path back to this account when an elevated
+// administrator process created it under BUILTIN\Administrators. Changing an
+// owner needs SeRestorePrivilege, so the privilege is enabled for this one call
+// and the token is put back afterwards; only an elevated token can enable it.
+// A refusal is not an error: the owner rule already accepted the path and the
+// DACL stays this account's.
+func windowsAdoptPrivateOwner(path string, account *windows.SID) {
+	var token windows.Token
+	if err := windows.OpenProcessToken(windows.CurrentProcess(), windows.TOKEN_QUERY|windows.TOKEN_ADJUST_PRIVILEGES, &token); err != nil {
+		return
+	}
+	defer token.Close()
+	name, err := windows.UTF16PtrFromString("SeRestorePrivilege")
+	if err != nil {
+		return
+	}
+	var luid windows.LUID
+	if err = windows.LookupPrivilegeValue(nil, name, &luid); err != nil {
+		return
+	}
+	enable := windows.Tokenprivileges{PrivilegeCount: 1, Privileges: [1]windows.LUIDAndAttributes{{Luid: luid, Attributes: windows.SE_PRIVILEGE_ENABLED}}}
+	var previous windows.Tokenprivileges
+	if err = windows.AdjustTokenPrivileges(token, false, &enable, 0, &previous, nil); err != nil {
+		return
+	}
+	defer func() { _ = windows.AdjustTokenPrivileges(token, false, &previous, 0, nil, nil) }()
+	_ = windows.SetNamedSecurityInfo(path, windows.SE_FILE_OBJECT, windows.OWNER_SECURITY_INFORMATION, account, nil, nil, nil)
+}
 func privatePath(path string, dir bool) error {
 	if err := noReparse(path); err != nil {
 		return err
@@ -88,8 +138,10 @@ func privatePath(path string, dir bool) error {
 	if err != nil {
 		return err
 	}
+	// The owner rule accepts Administrators for an administrator account; the
+	// DACL below still has to be this account's alone, with no inherited entry.
 	owner, _, err := sd.Owner()
-	if err != nil || !owner.Equals(sid) {
+	if err != nil || !windowsPrivateOwnerAccepted(owner, sid, windowsIsAdministrator()) {
 		return errors.New("unsafe_owner")
 	}
 	acl, _, err := sd.DACL()
@@ -119,6 +171,11 @@ func privatePath(path string, dir bool) error {
 		if info.NumberOfLinks != 1 {
 			return errors.New("unsafe_links")
 		}
+	}
+	if !owner.Equals(sid) {
+		// Accepted because this account is an administrator; hand it back so a
+		// later non-elevated run sees exactly what it always expects.
+		windowsAdoptPrivateOwner(path, sid)
 	}
 	return nil
 }

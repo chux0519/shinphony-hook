@@ -23,6 +23,10 @@ var (
 	errServiceTaskOtherBinary = errors.New("service_task_other_binary")
 	errServiceTaskRegister    = errors.New("service_task_register_failed")
 	errServiceTaskStart       = errors.New("service_task_start_failed")
+	// errServiceFolderOwner is a registered service that never answered because
+	// the state folder is still owned by Administrators (TF 160): the worker's own
+	// log says so, and the folder agrees.
+	errServiceFolderOwner = errors.New("service_folder_owned_by_administrators")
 )
 
 // Ensure only replaces a running, identified agent. Unknown/legacy service
@@ -192,6 +196,10 @@ func awaitService(dir string) error {
 			}
 		}
 		time.Sleep(200 * time.Millisecond)
+	}
+	// A platform that keeps the worker's own log can name the cause (TF 160).
+	if hint := serviceNotReadyHint(dir); hint != nil {
+		return hint
 	}
 	return errors.New("service_registered_but_not_ready: inspect service manager; uninstall-service preserves data")
 }

@@ -60,6 +60,11 @@ func sshPairServiceReason(err error) string {
 		return "the background task could not be registered"
 	case errors.Is(err, errServiceTaskStart):
 		return "the background task was registered but would not start"
+	case errors.Is(err, errServiceFolderOwner):
+		// TF 160: the worker said the state folder was rejected and the folder is
+		// still owned by Administrators, which is what an elevated pairing leaves
+		// behind. The repair names the folder through the environment, never a path.
+		return "the Hook folder is owned by Administrators; an administrator PowerShell can return it with icacls \"$env:USERPROFILE\\.shinphony-agent\" /setowner \"$env:USERNAME\" /T /C, then pair again"
 	case strings.HasPrefix(err.Error(), "service_registered_but_not_ready"):
 		return "the background task started but the Hook did not answer"
 	}

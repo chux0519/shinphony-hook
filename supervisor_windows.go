@@ -24,9 +24,16 @@ func supervise(dir, creds string) error {
 	for {
 		cmd := exec.Command(exe, "--state-dir", dir, "--credentials-dir", creds, "serve")
 		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		// The worker's own first error is the only thing that can explain a service
+		// that registered and never answered, so the tail of its output is kept in
+		// the state folder (TF 160).
+		output := &tailBuffer{limit: windowsServiceLogLimit / 2}
+		cmd.Stdout = output
+		cmd.Stderr = output
 		if err = cmd.Run(); err == nil {
 			return nil
 		}
+		recordServiceLog(dir, string(output.buf))
 		now := time.Now()
 		kept := failures[:0]
 		for _, t := range failures {
@@ -36,6 +43,7 @@ func supervise(dir, creds string) error {
 		}
 		failures = append(kept, now)
 		if len(failures) >= 3 {
+			recordServiceLog(dir, "worker_restart_limit_reached: "+string(output.buf))
 			return errors.New("worker_restart_limit_reached")
 		}
 		time.Sleep(2 * time.Second)

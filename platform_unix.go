@@ -101,6 +101,11 @@ func lockFilePath(path string) (func(), error) {
 }
 func privateUmask() error { syscall.Umask(0077); return nil }
 
+// serviceNotReadyHint names the cause of a service that registered but never
+// answered. Only Windows keeps the worker's own log (TF 160), so Unix has
+// nothing to add to the generic timeout.
+func serviceNotReadyHint(string) error { return nil }
+
 // Hooks may run inside an agent's sandbox: DSH's bwrap backend mounts a fresh
 // /tmp, while the per-user runtime directory stays visible read-only. Try that
 // one first; /tmp remains the default for systems without it.

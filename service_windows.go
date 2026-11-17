@@ -6,11 +6,16 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"io"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
 	"unicode/utf16"
+
+	"golang.org/x/sys/windows"
 )
 
 func psLiteral(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
@@ -113,4 +118,89 @@ func uninstallService(dir string) error {
 		return err
 	}
 	return awaitStopped(dir)
+}
+
+// The background task runs as the user (never elevated), so the supervisor can
+// leave its worker's last error in the state directory: the DACL, not the owner,
+// decides that write, and the folder grants this account FullControl. That one
+// file is how `install-service` turns a timeout into a step (TF 160).
+
+// windowsServiceLogName is the worker's last-failure log inside the state folder.
+const windowsServiceLogName = "service.log"
+
+// windowsServiceLogLimit bounds both what is kept and what is read back.
+const windowsServiceLogLimit = 8 * 1024
+
+// tailBuffer keeps the last limit bytes written to it, so a supervisor that runs
+// for hours does not grow with its worker's output.
+type tailBuffer struct {
+	buf   []byte
+	limit int
+}
+
+func (t *tailBuffer) Write(p []byte) (int, error) {
+	t.buf = append(t.buf, p...)
+	if len(t.buf) > t.limit {
+		t.buf = append(t.buf[:0], t.buf[len(t.buf)-t.limit:]...)
+	}
+	return len(p), nil
+}
+
+// recordServiceLog replaces the log with the worker's last failure. It is a
+// diagnostic, never state, so a write that fails is ignored.
+func recordServiceLog(dir, detail string) {
+	detail = strings.TrimSpace(strings.ReplaceAll(detail, "\r\n", "\n"))
+	if len(detail) > windowsServiceLogLimit/2 {
+		detail = detail[len(detail)-windowsServiceLogLimit/2:]
+	}
+	_ = os.WriteFile(filepath.Join(dir, windowsServiceLogName), []byte("worker_exit "+detail), 0600)
+}
+
+// windowsServiceLogText is the log's content, empty when there is none.
+func windowsServiceLogText(dir string) string {
+	file, err := os.Open(filepath.Join(dir, windowsServiceLogName))
+	if err != nil {
+		return ""
+	}
+	defer file.Close()
+	data, err := io.ReadAll(io.LimitReader(file, windowsServiceLogLimit))
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+
+// windowsServiceLogSaysFolderUnsafe reports whether the worker itself rejected
+// the state folder.
+func windowsServiceLogSaysFolderUnsafe(dir string) bool {
+	return strings.Contains(windowsServiceLogText(dir), unsafeStateDirectory)
+}
+
+// windowsFolderOwnerIsAdministrators reports whether the folder an elevated
+// pairing leaves behind is still owned by BUILTIN\Administrators.
+func windowsFolderOwnerIsAdministrators(dir string) bool {
+	sd, err := windows.GetNamedSecurityInfo(dir, windows.SE_FILE_OBJECT, windows.OWNER_SECURITY_INFORMATION)
+	if err != nil {
+		return false
+	}
+	owner, _, err := sd.Owner()
+	if err != nil || owner == nil {
+		return false
+	}
+	administrators, err := windowsAdministratorsSID()
+	return err == nil && owner.Equals(administrators)
+}
+
+// windowsServiceFolderOwner is a variable so the mapping below can be tested for
+// the folder an elevated pairing creates, without creating one here.
+var windowsServiceFolderOwner = windowsFolderOwnerIsAdministrators
+
+// serviceNotReadyHint explains a service that registered but never answered: the
+// worker's own log says it rejected the folder, and the folder is owned by
+// Administrators.
+func serviceNotReadyHint(dir string) error {
+	if !windowsServiceLogSaysFolderUnsafe(dir) || !windowsServiceFolderOwner(dir) {
+		return nil
+	}
+	return errServiceFolderOwner
 }
