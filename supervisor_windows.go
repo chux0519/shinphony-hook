@@ -13,6 +13,7 @@ import (
 // is forcibly terminated. Supervise the worker explicitly, with bounded bursts.
 // The task owns the entire process tree; uninstall terminates both processes.
 func supervise(dir, creds string) error {
+	detachOwnConsole()
 	if err := supervisorJob(); err != nil {
 		return err
 	}
@@ -23,7 +24,9 @@ func supervise(dir, creds string) error {
 	failures := []time.Time{}
 	for {
 		cmd := exec.Command(exe, "--state-dir", dir, "--credentials-dir", creds, "serve")
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		// The worker never gets a console window of its own, also once the
+		// supervisor has closed the one Windows opened for it (TF 161).
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: windows.CREATE_NO_WINDOW}
 		// The worker's own first error is the only thing that can explain a service
 		// that registered and never answered, so the tail of its output is kept in
 		// the state folder (TF 160).

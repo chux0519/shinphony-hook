@@ -5,3 +5,7 @@ package main
 import "errors"
 
 func supervise(dir, creds string) error { return errors.New("use_native_service_manager") }
+
+// detachOwnConsole has nothing to do outside Windows: a service has no console
+// window there.
+func detachOwnConsole() {}

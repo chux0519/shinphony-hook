@@ -47,23 +47,57 @@ const windowsServiceTaskScriptTail = `
 $user = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 $existing = Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue
 if ($null -ne $existing) {
-  if ([string]$existing.Actions[0].Execute -ne $exe) { throw 'shinphony_service_other_binary' }
-  try { Start-ScheduledTask -TaskName $name -ErrorAction Stop } catch { throw ('shinphony_service_start_failed: ' + $_.Exception.Message) }
-  Write-Output 'shinphony_service_started_existing'
-  return
+  $actionExe = [string]$existing.Actions[0].Execute
+  $actionArgs = [string]$existing.Actions[0].Arguments
+  $ours = ($actionExe -eq $exe) -or (($conhost -ne '') -and ($actionExe -eq $conhost) -and $actionArgs.Contains($exe))
+  if (-not $ours) { throw 'shinphony_service_other_binary' }
+  if (($actionExe -eq $execute) -and ($actionArgs -eq $arguments)) {
+    try { Start-ScheduledTask -TaskName $name -ErrorAction Stop } catch { throw ('shinphony_service_start_failed: ' + $_.Exception.Message) }
+    Write-Output 'shinphony_service_started_existing'
+    return
+  }
+  # Our Hook in an older form (the bare exe opens a console window, TF 161):
+  # stop it and register the current action over it.
+  Stop-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue
 }
-$action = New-ScheduledTaskAction -Execute $exe -Argument $arguments
+$action = New-ScheduledTaskAction -Execute $execute -Argument $arguments
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $user
 $principal = New-ScheduledTaskPrincipal -UserId $user -LogonType Interactive -RunLevel Limited
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -MultipleInstances IgnoreNew
-try { Register-ScheduledTask -TaskName $name -Action $action -Trigger $trigger -Principal $principal -Settings $settings | Out-Null } catch { throw ('shinphony_service_task_failed: ' + $_.Exception.Message) }
+try { Register-ScheduledTask -TaskName $name -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null } catch { throw ('shinphony_service_task_failed: ' + $_.Exception.Message) }
 try { Start-ScheduledTask -TaskName $name -ErrorAction Stop } catch { throw ('shinphony_service_start_failed: ' + $_.Exception.Message) }
 Write-Output 'shinphony_service_registered'`
 
-// windowsServiceTaskScript is the whole fixed script for one task.
-func windowsServiceTaskScript(name, exe, arguments string) string {
-	return windowsServiceTaskScriptHead + psLiteral(name) + `; $exe = ` + psLiteral(exe) +
-		`; $arguments = ` + psLiteral(arguments) + windowsServiceTaskScriptTail
+// windowsServiceTaskScript is the whole fixed script for one task. $exe is the
+// Hook that identifies the task as ours; $execute/$arguments are the action to
+// register; $conhost is set only for the headless form.
+func windowsServiceTaskScript(name string, action windowsTaskAction) string {
+	return windowsServiceTaskScriptHead + psLiteral(name) +
+		`; $exe = ` + psLiteral(action.Program) +
+		`; $execute = ` + psLiteral(action.Execute) +
+		`; $arguments = ` + psLiteral(action.Arguments) +
+		`; $conhost = ` + psLiteral(action.Conhost) + windowsServiceTaskScriptTail
+}
+
+// windowsConhostPath is %SystemRoot%\System32\conhost.exe when it exists.
+func windowsConhostPath() string {
+	root := os.Getenv("SystemRoot")
+	if root == "" {
+		root = `C:\Windows`
+	}
+	path := filepath.Join(root, "System32", "conhost.exe")
+	if info, err := os.Stat(path); err != nil || !info.Mode().IsRegular() {
+		return ""
+	}
+	return path
+}
+
+// windowsServiceTaskAction is the task action for this computer: headless under
+// conhost.exe when this Windows build supports it, else the Hook itself. The
+// probe is one version call and one stat, done at install.
+func windowsServiceTaskAction(exe, arguments string) windowsTaskAction {
+	build := windows.RtlGetVersion().BuildNumber
+	return windowsTaskActionFor(exe, `"`+exe+`"`, arguments, windowsConhostPath(), windowsHeadlessConsoleSupported(build))
 }
 
 // serviceTaskError maps what the script reported to the step that failed. The
@@ -97,13 +131,17 @@ func powershellReported(script string) (string, error) {
 	return out.String(), err
 }
 
+// windowsServiceArguments are the Hook's own arguments in the task action.
+func windowsServiceArguments(dir, creds string) string {
+	return "--state-dir " + syscall.EscapeArg(dir) + " --credentials-dir " + syscall.EscapeArg(creds) + " supervise"
+}
+
 func installService(dir, creds string) error {
 	exe, err := serviceExecutable(dir)
 	if err != nil {
 		return err
 	}
-	arguments := "--state-dir " + syscall.EscapeArg(dir) + " --credentials-dir " + syscall.EscapeArg(creds) + " supervise"
-	out, err := powershellReported(windowsServiceTaskScript(serviceName(dir), exe, arguments))
+	out, err := powershellReported(windowsServiceTaskScript(serviceName(dir), windowsServiceTaskAction(exe, windowsServiceArguments(dir, creds))))
 	if err != nil {
 		return serviceTaskError(out)
 	}
@@ -113,6 +151,28 @@ func installService(dir, creds string) error {
 	fmt.Println(`{"installed":true,"scope":"logged-in-user","service":"` + serviceName(dir) + `"}`)
 	return nil
 }
+
+// windowsServiceTaskCurrentScript reports whether the task already runs the
+// current action. It only reads.
+func windowsServiceTaskCurrentScript(name string, action windowsTaskAction) string {
+	return `$name = ` + psLiteral(name) + `; $execute = ` + psLiteral(action.Execute) + `; $arguments = ` + psLiteral(action.Arguments) + `
+$existing = Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue
+if (($null -ne $existing) -and ([string]$existing.Actions[0].Execute -eq $execute) -and ([string]$existing.Actions[0].Arguments -eq $arguments)) { Write-Output 'shinphony_service_current' }`
+}
+
+// refreshService re-registers a running service of this binary whose task still
+// has an older action (TF 161: the bare exe, which opens a console window). A
+// check that cannot run leaves the working service alone.
+func refreshService(dir, creds, exe string) error {
+	action := windowsServiceTaskAction(exe, windowsServiceArguments(dir, creds))
+	out, err := powershellReported(windowsServiceTaskCurrentScript(serviceName(dir), action))
+	if err != nil || strings.Contains(out, "shinphony_service_current") {
+		fmtInstalled()
+		return nil
+	}
+	return installService(dir, creds)
+}
+
 func uninstallService(dir string) error {
 	if err := powershell(`$name=` + psLiteral(serviceName(dir)) + `; $task=Get-ScheduledTask -TaskName $name -ErrorAction Stop; $owner=$task.Principal.UserId; if($owner -notlike 'S-1-*'){$owner=([System.Security.Principal.NTAccount]::new($owner)).Translate([System.Security.Principal.SecurityIdentifier]).Value}; if($owner -ne [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value){throw 'owner_mismatch'}; Stop-ScheduledTask -TaskName $name; Unregister-ScheduledTask -TaskName $name -Confirm:$false`); err != nil {
 		return err

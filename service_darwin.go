@@ -74,3 +74,10 @@ func uninstallService(dir string) error {
 	}
 	return awaitStopped(dir)
 }
+
+// refreshService leaves a running service of this binary as it is: its
+// registration has no form that changes between releases.
+func refreshService(dir, creds, exe string) error {
+	fmtInstalled()
+	return nil
+}

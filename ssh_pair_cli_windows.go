@@ -193,3 +193,10 @@ func sshKeyscanPins(port int) ([]string, error) {
 	}
 	return sshPinsFromKeyscanOutput(output)
 }
+
+// sshPairReportedUserName drops this computer's name from a local account
+// (`COMPUTER\user` → `user`); a domain account keeps its domain (TF 161).
+func sshPairReportedUserName(username string) string {
+	host, _ := os.Hostname()
+	return sshPairPlainUserName(username, host, os.Getenv("COMPUTERNAME"))
+}

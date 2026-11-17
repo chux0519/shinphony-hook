@@ -225,6 +225,7 @@ func run() error {
 		return supervise(*dir, *creds)
 	}
 	if args[0] == "serve" {
+		detachOwnConsole()
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
 		client := &http.Client{Timeout: 5 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return errors.New("redirect_refused") }}

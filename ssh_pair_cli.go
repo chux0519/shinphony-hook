@@ -364,7 +364,12 @@ func sshPairCLI(args []string, input io.Reader, output io.Writer) error {
 		return errors.New("ssh_pair_address_invalid")
 	}
 	account, err := user.Current()
-	if err != nil || len(account.Username) > 64 || strings.ContainsAny(account.Username, "\r\n\x00") {
+	if err != nil {
+		return errors.New("ssh_pair_user_unavailable")
+	}
+	// A Windows local account is reported as its plain name (TF 161).
+	username := sshPairReportedUserName(account.Username)
+	if len(username) > 64 || strings.ContainsAny(username, "\r\n\x00") {
 		return errors.New("ssh_pair_user_unavailable")
 	}
 	pins, err := localSSHPins(opts.localPort)
@@ -389,7 +394,7 @@ func sshPairCLI(args []string, input io.Reader, output io.Writer) error {
 		return errors.New("ssh_pair_response_invalid")
 	}
 	invitation.Expires = reply.Expires
-	hello, err := invitation.seal("hello", hostname, opts.address, opts.port, account.Username, pins, hex.EncodeToString(binaryHash[:]), invitation.Mode, invitation.Expires)
+	hello, err := invitation.seal("hello", hostname, opts.address, opts.port, username, pins, hex.EncodeToString(binaryHash[:]), invitation.Mode, invitation.Expires)
 	if err != nil {
 		return err
 	}
@@ -430,7 +435,7 @@ func sshPairCLI(args []string, input io.Reader, output io.Writer) error {
 			return errors.New("ssh_pair_response_invalid")
 		}
 		if mailbox.Key != nil {
-			request, err := invitation.verifyKey(*mailbox.Key, hello, account.Username)
+			request, err := invitation.verifyKey(*mailbox.Key, hello, username)
 			if err != nil {
 				return err
 			}

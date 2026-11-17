@@ -109,6 +109,16 @@ if (Test-Path -LiteralPath $binary) {
   }
 }
 
+# A file moved from %TEMP% keeps the access entries it had there (SYSTEM,
+# Administrators, other users), and the helper refuses a binary whose access
+# list is not this account's alone ("unsafe_acl", TF 160/161). Reset it to
+# inherit from the private folder; icacls needs no administrator rights for a
+# file this account owns.
+& icacls.exe $binary /reset /q | Out-Null
+if ($LASTEXITCODE -ne 0) {
+  Stop-Setup ('Could not set the permissions of the helper. ' + $repair)
+}
+
 $quoted = $binary -replace "'", "''"
 $status = (& $binary windows-sshd status) -join [Environment]::NewLine
 if ($LASTEXITCODE -ne 0 -or -not $status) {

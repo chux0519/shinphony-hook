@@ -54,3 +54,6 @@ func localSSHPins(port int) ([]string, error) {
 	}
 	return sshPinsFromKeyscanOutput(output)
 }
+
+// sshPairReportedUserName is the account name as it is: only Windows prefixes it.
+func sshPairReportedUserName(username string) string { return username }

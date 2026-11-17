@@ -81,6 +81,11 @@ func ensureServiceMode(dir, creds string, automatic bool) error {
 		return errors.New("service_upgrade_requires_recovery")
 	}
 	if status.Executable == exe {
+		if !automatic {
+			// The registration itself may be older than this binary's rules
+			// (TF 161: a Windows task that opens a console window).
+			return refreshService(dir, creds, exe)
+		}
 		fmtInstalled()
 		return nil
 	}
