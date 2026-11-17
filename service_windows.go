@@ -50,6 +50,20 @@ if ($null -ne $existing) {
   $actionExe = [string]$existing.Actions[0].Execute
   $actionArgs = [string]$existing.Actions[0].Arguments
   $ours = ($actionExe -eq $exe) -or (($conhost -ne '') -and ($actionExe -eq $conhost) -and $actionArgs.Contains($exe))
+  # An older release of this Hook, in this Hook's own folder, is ours too: every
+  # update renames the binary, so the task still names the previous one (TF 162:
+  # "belongs to a different helper"). Only a helper outside this folder, or a
+  # file that is not a release name, is refused.
+  if (-not $ours) {
+    $candidate = $actionExe
+    if ([System.IO.Path]::GetFileName($actionExe) -ieq 'conhost.exe') {
+      $m = [regex]::Match($actionArgs, '^\s*--headless\s+"([^"]+)"')
+      if ($m.Success) { $candidate = $m.Groups[1].Value }
+    }
+    $sameFolder = [string]::Equals([System.IO.Path]::GetDirectoryName($candidate), [System.IO.Path]::GetDirectoryName($exe), [System.StringComparison]::OrdinalIgnoreCase)
+    $releaseName = [System.IO.Path]::GetFileName($candidate) -match '^shinphony-hook-[0-9a-f]{64}\.exe$'
+    $ours = $sameFolder -and $releaseName
+  }
   if (-not $ours) { throw 'shinphony_service_other_binary' }
   if (($actionExe -eq $execute) -and ($actionArgs -eq $arguments)) {
     try { Start-ScheduledTask -TaskName $name -ErrorAction Stop } catch { throw ('shinphony_service_start_failed: ' + $_.Exception.Message) }
