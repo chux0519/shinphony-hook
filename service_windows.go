@@ -74,6 +74,18 @@ if ($null -ne $existing) {
   # stop it and register the current action over it.
   Stop-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue
 }
+# An older release of this Hook may still be running from this folder (started
+# by an earlier task definition or pairing): it holds the service socket, so the
+# new task starts and exits and the install reports "not ready" (TF 166, user
+# machine). Stop only release binaries in this folder other than $exe itself;
+# the process running this install is $exe and is never touched.
+$folder = [System.IO.Path]::GetDirectoryName($exe)
+Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+  $_.ExecutablePath -and
+  [string]::Equals([System.IO.Path]::GetDirectoryName($_.ExecutablePath), $folder, [System.StringComparison]::OrdinalIgnoreCase) -and
+  ([System.IO.Path]::GetFileName($_.ExecutablePath) -match '^shinphony-hook-[0-9a-f]{64}\.exe$') -and
+  -not [string]::Equals($_.ExecutablePath, $exe, [System.StringComparison]::OrdinalIgnoreCase)
+} | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 $action = New-ScheduledTaskAction -Execute $execute -Argument $arguments
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $user
 $principal = New-ScheduledTaskPrincipal -UserId $user -LogonType Interactive -RunLevel Limited
