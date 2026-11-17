@@ -40,9 +40,41 @@ const sshPairDoneLine = "Done. Finish on your phone."
 // running Hook when it checks. Neither outcome may fail the pairing: the key is
 // already installed, and the service can still be set up from the App.
 const (
-	sshPairServiceReadyLine = "Shinphony Hook is running."
-	sshPairServiceWarning   = "Could not start Shinphony Hook; set it up from Shinphony."
+	sshPairServiceReadyLine     = "Shinphony Hook is running."
+	sshPairServiceWarning       = "Could not start Shinphony Hook; set it up from Shinphony."
+	sshPairServiceWarningPrefix = "Could not start Shinphony Hook"
+	sshPairServiceWarningSuffix = "; set it up from Shinphony."
 )
+
+// sshPairServiceReason names the step that failed, in plain words and without a
+// path, a hash or command output. An unknown failure keeps the one generic line.
+func sshPairServiceReason(err error) string {
+	switch {
+	case err == nil:
+		return ""
+	case errors.Is(err, errServiceTaskNeedsAdmin):
+		return "Windows did not allow this account to register a background task; allow administrator permission when Windows asks, then pair again"
+	case errors.Is(err, errServiceTaskOtherBinary):
+		return "another background task with this name belongs to a different helper; uninstall the old helper first"
+	case errors.Is(err, errServiceTaskRegister):
+		return "the background task could not be registered"
+	case errors.Is(err, errServiceTaskStart):
+		return "the background task was registered but would not start"
+	case strings.HasPrefix(err.Error(), "service_registered_but_not_ready"):
+		return "the background task started but the Hook did not answer"
+	}
+	return ""
+}
+
+// sshPairServiceWarningLine is the one warning line, with the failing step when
+// the platform named it (TF 159: "Could not start" alone said nothing).
+func sshPairServiceWarningLine(err error) string {
+	reason := sshPairServiceReason(err)
+	if reason == "" {
+		return sshPairServiceWarning
+	}
+	return sshPairServiceWarningPrefix + " (" + reason + ")" + sshPairServiceWarningSuffix
+}
 
 type sshPairOptions struct {
 	fromStdin bool
@@ -174,7 +206,7 @@ func startSSHPairService(home string, output io.Writer, install func(dir, creds 
 	err := install(dir, creds)
 	os.Stdout = stdout
 	if err != nil {
-		fmt.Fprintln(output, sshPairServiceWarning)
+		fmt.Fprintln(output, sshPairServiceWarningLine(err))
 		return
 	}
 	fmt.Fprintln(output, sshPairServiceReadyLine)

@@ -286,6 +286,50 @@ func TestSSHPairNoNotifyLeavesServiceAlone(t *testing.T) {
 	}
 }
 
+// TF 159: "Could not start Shinphony Hook" said nothing about where setup
+// stopped, so the user could not act on it. A failure the platform names keeps
+// one line and adds that step; the code never appears.
+func TestSSHPairServiceWarningNamesTheFailedStep(t *testing.T) {
+	cases := []struct {
+		err  error
+		want string
+	}{
+		{errServiceTaskNeedsAdmin, "administrator permission"},
+		{errServiceTaskOtherBinary, "different helper"},
+		{errServiceTaskRegister, "could not be registered"},
+		{errServiceTaskStart, "would not start"},
+		{errors.New("service_registered_but_not_ready: inspect service manager; uninstall-service preserves data"), "did not answer"},
+	}
+	for _, c := range cases {
+		line := sshPairServiceWarningLine(c.err)
+		if !strings.HasPrefix(line, sshPairServiceWarningPrefix) ||
+			!strings.HasSuffix(line, sshPairServiceWarningSuffix) {
+			t.Fatalf("line = %q", line)
+		}
+		if !strings.Contains(line, c.want) {
+			t.Fatalf("line %q does not name %q", line, c.want)
+		}
+		if strings.Contains(line, "\n") {
+			t.Fatalf("line is not one line: %q", line)
+		}
+	}
+	// An error with no known step keeps exactly the old sentence.
+	if got := sshPairServiceWarningLine(errors.New("service_manager_failed: launchctl")); got != sshPairServiceWarning {
+		t.Fatalf("unknown failure = %q", got)
+	}
+	// And the warning a real pairing prints carries the step, not the code.
+	var output bytes.Buffer
+	if err := finishSSHPairInstall(true, privateTestHome(t), pairIntentID(), time.Now(), &output,
+		func(string, string) error { return errServiceTaskStart },
+		func() error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(output.String(), "would not start") ||
+		strings.Contains(output.String(), "service_task_start_failed") {
+		t.Fatalf("output = %q", output.String())
+	}
+}
+
 // The service lines are one line each and never suggest the pairing failed.
 func TestSSHPairServiceLines(t *testing.T) {
 	if sshPairServiceReadyLine != "Shinphony Hook is running." {

@@ -69,10 +69,13 @@ if ($owner.Value -ne $me.User.Value) {
 # with one rule, for you.
 $acl = Get-FolderAcl $dir 'Access'
 $acl.SetAccessRuleProtection($true, $false)
-foreach ($rule in @($acl.Access)) {
-  $keep = $false
-  try { $keep = ($rule.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value -eq $me.User.Value) } catch { }
-  if (-not $keep) { $acl.RemoveAccessRuleSpecific($rule) | Out-Null }
+# GetAccessRules, not the .Access property: PowerShell 7 does not add .Access to
+# an ACL that came from FileSystemAclExtensions, and @($null) is one null rule.
+# Rules come back as SIDs, so nothing needs translating.
+$sidType = [System.Security.Principal.SecurityIdentifier]
+foreach ($rule in @($acl.GetAccessRules($true, $false, $sidType))) {
+  if ($null -eq $rule) { continue }
+  if ($rule.IdentityReference.Value -ne $me.User.Value) { $acl.RemoveAccessRuleSpecific($rule) | Out-Null }
 }
 $acl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new($me.User, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow'))
 try {

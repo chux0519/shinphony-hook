@@ -16,6 +16,15 @@ import (
 	"time"
 )
 
+// Service setup failures a platform can name precisely, so the pairing warning
+// says which step stopped it instead of one generic sentence (TF 159).
+var (
+	errServiceTaskNeedsAdmin  = errors.New("service_task_needs_admin")
+	errServiceTaskOtherBinary = errors.New("service_task_other_binary")
+	errServiceTaskRegister    = errors.New("service_task_register_failed")
+	errServiceTaskStart       = errors.New("service_task_start_failed")
+)
+
 // Ensure only replaces a running, identified agent. Unknown/legacy service
 // registrations are deliberately not overwritten. Database and credentials stay
 // in place, and a failed replacement restores the previous executable.
