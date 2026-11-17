@@ -162,6 +162,9 @@ func (s *unixSSHKeyStore) lock() (func(), error) {
 	return func() { unix.Close(lock) }, nil
 }
 
+// openFallbackSSHKeyStore: a Unix account has one key file.
+func openFallbackSSHKeyStore(string) (sshKeyStore, error) { return nil, nil }
+
 func openSSHKeyStore(home string, create bool) (sshKeyStore, error) {
 	dir, err := sshKeyDirectory(home, create)
 	if err != nil {

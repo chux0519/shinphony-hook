@@ -167,6 +167,26 @@ func countSSHKeyLines(data []byte, record sshKeyRecord, id string) (owned, other
 }
 
 func manageSSHKey(home, operation string, request sshKeyRequest) (any, error) {
+	result, err := manageSSHKeyIn(home, operation, request, openSSHKeyStore)
+	// A key written where this account's keys used to go (Windows: the shared
+	// administrator file before sshd_config was consulted) is still revoked
+	// there.
+	if operation == "revoke" && err != nil && (err.Error() == "keys_not_managed" || errors.Is(err, os.ErrNotExist)) {
+		fallback, openErr := openFallbackSSHKeyStore(home)
+		if openErr == nil && fallback != nil {
+			fallback.close()
+			return manageSSHKeyIn(home, operation, request, func(string, bool) (sshKeyStore, error) {
+				return openFallbackSSHKeyStore(home)
+			})
+		}
+		if openErr != nil && !errors.Is(openErr, os.ErrNotExist) {
+			return nil, openErr
+		}
+	}
+	return result, err
+}
+
+func manageSSHKeyIn(home, operation string, request sshKeyRequest, open func(string, bool) (sshKeyStore, error)) (any, error) {
 	if operation == "preview" {
 		return previewSSHKey(home, request)
 	}
@@ -181,7 +201,7 @@ func manageSSHKey(home, operation string, request sshKeyRequest) (any, error) {
 			return nil, err
 		}
 	}
-	store, err := openSSHKeyStore(home, operation == "install")
+	store, err := open(home, operation == "install")
 	if errors.Is(err, os.ErrNotExist) && operation == "list" {
 		return map[string]any{"schema": 1, "keys": []sshKeyRecord{}}, nil
 	}

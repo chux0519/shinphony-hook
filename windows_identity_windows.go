@@ -8,6 +8,7 @@ package main
 // and whether the process is elevated.
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 
@@ -79,13 +80,30 @@ func windowsElevatedWriteList(home, temp string) []string {
 	}
 }
 
-// windowsKeyDirectoryForAccount is where this account's key goes: the
-// Administrators file lives in ProgramData\ssh, every other account in its own
-// .ssh directory.
+// windowsKeyDirectoryForAccount is where this account's key goes: the file sshd
+// actually reads for it. An administrator's key goes to the shared file in
+// ProgramData\ssh while sshd_config sends Administrators there (the default);
+// otherwise, and for every other account, to its own .ssh directory (TF 162).
 func windowsKeyDirectoryForAccount(home string) (dir, file string, admin bool) {
-	admin = windowsIsAdministrator()
-	dir, file = windowsKeyDirectory(admin, home)
-	return dir, file, admin
+	return sshKeyTargetForAccount(windowsIsAdministrator(), windowsSSHDConfig(), home, sshdConfigDirectory())
+}
+
+// windowsSSHDConfig is sshd_config's content, or nil when it cannot be read
+// (then an administrator keeps the shared key file).
+func windowsSSHDConfig() []byte {
+	file, err := os.Open(filepath.Join(sshdConfigDirectory(), "sshd_config"))
+	if err != nil {
+		return nil
+	}
+	defer file.Close()
+	data, err := io.ReadAll(io.LimitReader(file, 1<<20))
+	if err != nil {
+		return nil
+	}
+	if data == nil {
+		data = []byte{}
+	}
+	return data
 }
 
 // describeKeyTarget is the file this account's key is installed into. It is

@@ -166,9 +166,10 @@ func windowsSSHDPrepareKeys(output io.Writer) error {
 	if err != nil {
 		return errors.New("keys_home_unavailable")
 	}
-	// A standard account's key never goes to ProgramData\ssh, so there is
-	// nothing privileged to prepare and nothing is created.
-	if !windowsIsAdministrator() {
+	// A standard account's key never goes to ProgramData\ssh, and neither does
+	// an administrator's when sshd_config reads it from ~/.ssh: there is nothing
+	// privileged to prepare and nothing is created.
+	if _, _, shared := windowsKeyDirectoryForAccount(home); !shared {
 		_, err = io.WriteString(output, "This account's key does not need administrator permission.\n")
 		return err
 	}

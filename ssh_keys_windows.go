@@ -259,6 +259,34 @@ var sshKeyStoreTarget = windowsKeyDirectoryForAccount
 
 func openSSHKeyStore(home string, create bool) (sshKeyStore, error) {
 	dir, keysFile, admin := sshKeyStoreTarget(home)
+	return openSSHKeyStoreAt(dir, keysFile, admin, create)
+}
+
+// sshKeyFallbackTarget is an administrator's other key file: sshd reads either
+// the shared administrators_authorized_keys or ~/.ssh/authorized_keys,
+// depending on sshd_config, and a key paired under the other setting (or
+// before sshd_config was consulted, TF 162) is still revoked where it was
+// written. A standard account has one file. Tests replace it.
+var sshKeyFallbackTarget = func(home string) (dir, file string, admin, ok bool) {
+	if !windowsIsAdministrator() {
+		return "", "", false, false
+	}
+	_, _, shared := sshKeyStoreTarget(home)
+	dir, file = windowsKeyDirectory(!shared, home)
+	return dir, file, !shared, true
+}
+
+// openFallbackSSHKeyStore opens sshKeyFallbackTarget so a revoke can still find
+// a key written there; nil when this account has no other target.
+func openFallbackSSHKeyStore(home string) (sshKeyStore, error) {
+	dir, file, admin, ok := sshKeyFallbackTarget(home)
+	if !ok {
+		return nil, nil
+	}
+	return openSSHKeyStoreAt(dir, file, admin, false)
+}
+
+func openSSHKeyStoreAt(dir, keysFile string, admin, create bool) (sshKeyStore, error) {
 	// administrators_authorized_keys lives in ProgramData\ssh, which a
 	// non-elevated administrator token can neither read nor write.
 	if admin && !windowsIsElevated() {
@@ -596,13 +624,24 @@ func windowsCreateAdminKeyFile(path string) error {
 	return windows.CloseHandle(handle)
 }
 
-// windowsKeyFileAttributes is the creation ACL for a temp file: the
-// Administrators/SYSTEM pair for the shared file, user-only otherwise.
+// windowsKeyFileAttributes is the creation ACL for a key, temp or lock file and
+// a new key directory (sshKeyFileSDDL).
 func windowsKeyFileAttributes(admin bool) (*windows.SecurityAttributes, error) {
 	if admin {
 		return windowsAdminSecurityAttributes()
 	}
-	return attributes()
+	sid, err := currentSID()
+	if err != nil {
+		return nil, err
+	}
+	sd, err := windows.SecurityDescriptorFromString(sshKeyFileSDDL(false, sid.String()))
+	if err != nil {
+		return nil, err
+	}
+	return &windows.SecurityAttributes{
+		Length:             uint32(unsafe.Sizeof(windows.SecurityAttributes{})),
+		SecurityDescriptor: sd,
+	}, nil
 }
 
 func (s *windowsSSHKeyStore) close() {}

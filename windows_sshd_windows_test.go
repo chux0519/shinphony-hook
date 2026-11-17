@@ -51,7 +51,7 @@ func TestWindowsSSHDStatusJSONKeys(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := filepath.Join(home, ".ssh", "authorized_keys")
-	if windowsIsAdministrator() {
+	if _, _, shared := sshKeyTargetForAccount(windowsIsAdministrator(), windowsSSHDConfig(), home, sshdConfigDirectory()); shared {
 		want = filepath.Join(sshdConfigDirectory(), "administrators_authorized_keys")
 	}
 	if status.KeyFile != want {

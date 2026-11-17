@@ -82,8 +82,8 @@ func TestWindowsKeyFileChoice(t *testing.T) {
 			t.Fatalf("user target = %q/%q", dir, file)
 		}
 	}
-	if admin != windowsIsAdministrator() {
-		t.Fatal("the file choice must follow Administrators membership")
+	if _, _, want := sshKeyTargetForAccount(windowsIsAdministrator(), windowsSSHDConfig(), home, sshdConfigDirectory()); admin != want {
+		t.Fatal("the file choice must follow Administrators membership and sshd_config")
 	}
 	if want := filepath.Join(dir, file); describeKeyTarget(home) != want {
 		t.Fatalf("describeKeyTarget = %q, want %q", describeKeyTarget(home), want)
@@ -339,5 +339,40 @@ func TestWindowsPrepareAdminKeyFileNeedsElevation(t *testing.T) {
 	}
 	if entries, err := os.ReadDir(dir); err != nil || len(entries) != 0 {
 		t.Fatalf("prepare without elevation created files: %v", err)
+	}
+}
+
+// A key paired before sshd_config was consulted sits in the shared
+// administrator file while the account's keys now go to ~/.ssh (TF 162). Revoke
+// still finds it there and removes only its line; a key in neither file is
+// still "keys_not_managed".
+func TestWindowsKeyRevokeFindsAKeyInThePreviousFile(t *testing.T) {
+	shared := profileLikeDir(t)
+	req := keyRequest()
+	useKeyStoreAt(t, shared, "administrators_authorized_keys")
+	if _, err := manageSSHKey(t.TempDir(), "install", req); err != nil {
+		t.Fatal(err)
+	}
+	// Now the account's target is its own (empty, missing) .ssh directory.
+	home := t.TempDir()
+	useKeyStoreAt(t, filepath.Join(home, ".ssh"), "authorized_keys")
+	previous := sshKeyFallbackTarget
+	sshKeyFallbackTarget = func(string) (string, string, bool, bool) {
+		return shared, "administrators_authorized_keys", false, true
+	}
+	t.Cleanup(func() { sshKeyFallbackTarget = previous })
+	if _, err := manageSSHKey(home, "revoke", sshKeyRequest{ID: req.ID}); err != nil {
+		t.Fatalf("revoke of a key in the previous file = %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(shared, "administrators_authorized_keys"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), req.ID) {
+		t.Fatalf("the key line is still there: %q", data)
+	}
+	other := sshKeyRequest{ID: "se-p256:00000000-0000-4000-8000-000000000000"}
+	if _, err := manageSSHKey(home, "revoke", other); err == nil || err.Error() != "keys_not_managed" {
+		t.Fatalf("revoke of an unknown key = %v, want keys_not_managed", err)
 	}
 }
